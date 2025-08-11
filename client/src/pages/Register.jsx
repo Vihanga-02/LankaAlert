@@ -25,7 +25,7 @@ const Register = () => {
   ];
 
   const districtCities = {
-  Colombo: ["Colombo", "Homagama", "Awissawella", "Kaduwela", "Moratuwa"],
+  Colombo: ["Colombo", "Homagama", "Awissawella", "Kaduwela", "Moratuwa","Maharagama"],
   Gampaha: ["Negombo", "Ja-Ela", "Wattala", "Kelaniya", "Ragama"],
   Kalutara: ["Kalutara", "Beruwala", "Panadura", "Horana", "Matugama"],
   Kandy: ["Kandy", "Peradeniya", "Gampola", "Akurana", "Kadugannawa"],
