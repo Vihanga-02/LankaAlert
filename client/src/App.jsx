@@ -2,6 +2,8 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { MapZoneProvider } from "./context/MapZoneContext";
+import { DisasterReportsProvider } from "./context/DisasterReportsContext";
+import { RewardProvider } from "./context/RewardContext";
 
 // Public & User Pages
 import Navbar from "./components/Navbar";
@@ -67,48 +69,52 @@ const UserLayout = () => (
 function App() {
   return (
     <AuthProvider>
-      <MapZoneProvider>
-        <Router>
-          <Routes>
-            {/* Login & Register */}
-            <Route
-              path="/login"
-              element={<PublicRoute><Login /></PublicRoute>}
-            />
-            <Route
-              path="/register"
-              element={<PublicRoute><Register /></PublicRoute>}
-            />
+      <DisasterReportsProvider>
+        <RewardProvider>
+          <MapZoneProvider>
+            <Router>
+              <Routes>
+                {/* Login & Register */}
+                <Route
+                  path="/login"
+                  element={<PublicRoute><Login /></PublicRoute>}
+                />
+                <Route
+                  path="/register"
+                  element={<PublicRoute><Register /></PublicRoute>}
+                />
 
-            {/* Admin Routes */}
-            <Route
-              path="/admin"
-              element={<AdminRoute><AdminLayout /></AdminRoute>}
-            >
-              <Route index element={<AdminDashboard />} />
-              <Route path="roles" element={<RoleManagement />} />
-              <Route path="disasteralerts" element={<DisasterAlertManagement />} />
-              <Route path="weatheralerts" element={<WeatherAlertManagement />} />
-              <Route path="map" element={<MapUpdate />} />
-              <Route path="emergency" element={<EmergencyRequests />} />
-              <Route path="inventory" element={<InventoryManagement />} />
-            </Route>
+                {/* Admin Routes */}
+                <Route
+                  path="/admin"
+                  element={<AdminRoute><AdminLayout /></AdminRoute>}
+                >
+                  <Route index element={<AdminDashboard />} />
+                  <Route path="roles" element={<RoleManagement />} />
+                  <Route path="disasteralerts" element={<DisasterAlertManagement />} />
+                  <Route path="weatheralerts" element={<WeatherAlertManagement />} />
+                  <Route path="map" element={<MapUpdate />} />
+                  <Route path="emergency" element={<EmergencyRequests />} />
+                  <Route path="inventory" element={<InventoryManagement />} />
+                </Route>
 
-            {/* User/Public Routes with layout */}
-            <Route element={<UserLayout />}>
-              <Route path="/" element={<Home />} />
-              <Route path="/alerts" element={<Alerts />} />
-              <Route path="/live-tracking" element={<LiveTracking />} />
-              <Route path="/emergency-help" element={<EmergencyHelp />} />
-              <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
-              <Route path="/report-disaster" element={<PrivateRoute><ReportDisaster /></PrivateRoute>} />
-            </Route>
+                {/* User/Public Routes with layout */}
+                <Route element={<UserLayout />}>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/alerts" element={<Alerts />} />
+                  <Route path="/live-tracking" element={<LiveTracking />} />
+                  <Route path="/emergency-help" element={<EmergencyHelp />} />
+                  <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+                  <Route path="/report-disaster" element={<PrivateRoute><ReportDisaster /></PrivateRoute>} />
+                </Route>
 
-            {/* Catch-All Redirect */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Router>
-      </MapZoneProvider>
+                {/* Catch-All Redirect */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Router>
+          </MapZoneProvider>
+        </RewardProvider>
+      </DisasterReportsProvider>
     </AuthProvider>
   );
 }
