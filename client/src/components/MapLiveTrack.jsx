@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from "@react-google-maps/api";
+import { GoogleMap, Marker, InfoWindow } from "@react-google-maps/api";
 import { AlertTriangle, ShieldCheck } from "lucide-react";
 
 const containerStyle = {
@@ -8,32 +8,28 @@ const containerStyle = {
   borderRadius: "0.5rem",
 };
 
+// Custom icons (replace with your actual image paths in /public)
 const dangerIcons = {
-  Floods: { url: "/flood.png", w: 40, h: 40 },
-  Landslides: { url: "/landslide.png", w: 40, h: 40 },
-  "High Wind": { url: "/highwind.png", w: 40, h: 40 },
-  "Power Cuts": { url: "/nopower.png", w: 40, h: 40 },
-  "Water Cuts": { url: "/nowater.png", w: 40, h: 40 },
-  "Elephants Moving": { url: "/elephant1.png", w: 40, h: 40 },
+  floods: { url: "/flood.png", w: 40, h: 40 },
+  landslides: { url: "/landslide.png", w: 40, h: 40 },
+  "high wind": { url: "/highwind.png", w: 40, h: 40 },
+  "power cuts": { url: "/nopower.png", w: 40, h: 40 },
+  "water cuts": { url: "/nowater.png", w: 40, h: 40 },
+  "elephants moving": { url: "/elephant1.png", w: 40, h: 40 },
 };
 
 const safeIcon = { url: "/safezone.png", w: 40, h: 40 };
 
-function MapView({ zones = [], onSelectSafeZone }) {
-  const { isLoaded } = useJsApiLoader({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
-  });
-
+function MapLiveTrack({ zones = [], onSelectSafeZone }) {
   const [selectedZone, setSelectedZone] = useState(null);
 
-  if (!isLoaded) return <div>Loading Map...</div>;
-
-  const center = { lat: 7.8731, lng: 80.7718 }; // Center of Sri Lanka
+  const center = { lat: 7.8731, lng: 80.7718 }; // Sri Lanka center
 
   const getMarkerIcon = (category, subCategory) => {
+    const key = (subCategory || "").toLowerCase();
     const config =
-      category === "danger" && dangerIcons[subCategory]
-        ? dangerIcons[subCategory]
+      category === "danger" && dangerIcons[key]
+        ? dangerIcons[key]
         : safeIcon;
 
     return {
@@ -50,18 +46,22 @@ function MapView({ zones = [], onSelectSafeZone }) {
           key={zone.id}
           position={{ lat: zone.latitude, lng: zone.longitude }}
           onClick={() => setSelectedZone(zone)}
-          onDblClick={() => onSelectSafeZone(zone)}
+          onDblClick={() => onSelectSafeZone?.(zone)}
           icon={getMarkerIcon(zone.category, zone.subCategory)}
         />
       ))}
 
       {selectedZone && (
         <InfoWindow
-          position={{ lat: selectedZone.latitude, lng: selectedZone.longitude }}
+          position={{
+            lat: selectedZone.latitude,
+            lng: selectedZone.longitude,
+          }}
           onCloseClick={() => setSelectedZone(null)}
         >
           <div className="space-y-1 text-sm">
             <h3 className="font-semibold text-base">{selectedZone.name}</h3>
+
             {selectedZone.category === "danger" ? (
               <p className="text-red-600 flex items-center">
                 <AlertTriangle className="h-4 w-4 mr-1" />
@@ -73,14 +73,19 @@ function MapView({ zones = [], onSelectSafeZone }) {
                 Safe Zone
               </p>
             )}
-            {selectedZone.safeDescription && <p>{selectedZone.safeDescription}</p>}
+
+            {selectedZone.safeDescription && (
+              <p>{selectedZone.safeDescription}</p>
+            )}
+
             <p>
               {selectedZone.city}, {selectedZone.district}
             </p>
+
             {selectedZone.category !== "danger" && (
               <button
                 onClick={() => {
-                  onSelectSafeZone(selectedZone);
+                  onSelectSafeZone?.(selectedZone);
                   setSelectedZone(null);
                 }}
                 className="mt-1 px-2 py-1 bg-blue-500 text-white rounded text-xs"
@@ -95,4 +100,4 @@ function MapView({ zones = [], onSelectSafeZone }) {
   );
 }
 
-export default React.memo(MapView);
+export default React.memo(MapLiveTrack);

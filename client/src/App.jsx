@@ -4,6 +4,8 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import { MapZoneProvider } from "./context/MapZoneContext";
 import { DisasterReportsProvider } from "./context/DisasterReportsContext";
 import { RewardProvider } from "./context/RewardContext";
+import { DisasterAlertProvider } from "./context/DisasterAlertContext";
+import { GoogleMapsProvider } from "./context/GoogleMapsProvider"; // ✅ Added
 
 // Public & User Pages
 import Navbar from "./components/Navbar";
@@ -12,6 +14,7 @@ import Chatbot from "./components/Chatbot";
 import Home from "./pages/Home";
 import Alerts from "./pages/Alerts";
 import LiveTracking from "./pages/LiveTracking";
+import RiskRoute from "./pages/RiskRoute";
 import EmergencyHelp from "./pages/EmergencyHelp";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -70,50 +73,55 @@ function App() {
   return (
     <AuthProvider>
       <DisasterReportsProvider>
-        <RewardProvider>
-          <MapZoneProvider>
-            <Router>
-              <Routes>
-                {/* Login & Register */}
-                <Route
-                  path="/login"
-                  element={<PublicRoute><Login /></PublicRoute>}
-                />
-                <Route
-                  path="/register"
-                  element={<PublicRoute><Register /></PublicRoute>}
-                />
+        <DisasterAlertProvider>
+          <RewardProvider>
+            <MapZoneProvider>
+              <GoogleMapsProvider> {/* ✅ All maps use one loader */}
+                <Router>
+                  <Routes>
+                    {/* Login & Register */}
+                    <Route
+                      path="/login"
+                      element={<PublicRoute><Login /></PublicRoute>}
+                    />
+                    <Route
+                      path="/register"
+                      element={<PublicRoute><Register /></PublicRoute>}
+                    />
 
-                {/* Admin Routes */}
-                <Route
-                  path="/admin"
-                  element={<AdminRoute><AdminLayout /></AdminRoute>}
-                >
-                  <Route index element={<AdminDashboard />} />
-                  <Route path="roles" element={<RoleManagement />} />
-                  <Route path="disasteralerts" element={<DisasterAlertManagement />} />
-                  <Route path="weatheralerts" element={<WeatherAlertManagement />} />
-                  <Route path="map" element={<MapUpdate />} />
-                  <Route path="emergency" element={<EmergencyRequests />} />
-                  <Route path="inventory" element={<InventoryManagement />} />
-                </Route>
+                    {/* Admin Routes */}
+                    <Route
+                      path="/admin"
+                      element={<AdminRoute><AdminLayout /></AdminRoute>}
+                    >
+                      <Route index element={<AdminDashboard />} />
+                      <Route path="roles" element={<RoleManagement />} />
+                      <Route path="disasteralerts" element={<DisasterAlertManagement />} />
+                      <Route path="weatheralerts" element={<WeatherAlertManagement />} />
+                      <Route path="map" element={<MapUpdate />} />
+                      <Route path="emergency" element={<EmergencyRequests />} />
+                      <Route path="inventory" element={<InventoryManagement />} />
+                    </Route>
 
-                {/* User/Public Routes with layout */}
-                <Route element={<UserLayout />}>
-                  <Route path="/" element={<Home />} />
-                  <Route path="/alerts" element={<Alerts />} />
-                  <Route path="/live-tracking" element={<LiveTracking />} />
-                  <Route path="/emergency-help" element={<EmergencyHelp />} />
-                  <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
-                  <Route path="/report-disaster" element={<PrivateRoute><ReportDisaster /></PrivateRoute>} />
-                </Route>
+                    {/* User/Public Routes with layout */}
+                    <Route element={<UserLayout />}>
+                      <Route path="/" element={<Home />} />
+                      <Route path="/alerts" element={<Alerts />} />
+                      <Route path="/live-tracking" element={<LiveTracking />} />
+                      <Route path="/risk-route" element={<RiskRoute />} />
+                      <Route path="/emergency-help" element={<EmergencyHelp />} />
+                      <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+                      <Route path="/report-disaster" element={<PrivateRoute><ReportDisaster /></PrivateRoute>} />
+                    </Route>
 
-                {/* Catch-All Redirect */}
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </Router>
-          </MapZoneProvider>
-        </RewardProvider>
+                    {/* Catch-All Redirect */}
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Routes>
+                </Router>
+              </GoogleMapsProvider>
+            </MapZoneProvider>
+          </RewardProvider>
+        </DisasterAlertProvider>
       </DisasterReportsProvider>
     </AuthProvider>
   );
