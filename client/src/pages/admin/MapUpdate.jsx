@@ -1,6 +1,7 @@
 // src/pages/MapUpdate.jsx
 import React, { useState, useEffect, useMemo } from "react";
 import MapMarking from "../../components/MapMarking";
+import MapZoneForm from "../../components/MapZoneForm";
 import { useMapZone } from "../../context/MapZoneContext";
 import { Layers, RefreshCw, Plus, Pencil, Trash2, Filter } from "lucide-react";
 
@@ -56,7 +57,6 @@ const categoryPills = [
   { id: "safe", name: "Safe Zones", color: "text-green-600" },
 ];
 
-// -------- Component --------
 const MapUpdate = () => {
   const { zones, addZone, updateZone, deleteZone, fetchZones, loading } = useMapZone();
 
@@ -98,7 +98,7 @@ const MapUpdate = () => {
     fetchZones();
   }, []);
 
-  // Derived: filtered zones for map + table
+  // Filtered zones
   const filteredZones = useMemo(() => {
     return zones.filter((z) => {
       if (activeCategory !== "all" && z.category !== activeCategory) return false;
@@ -113,14 +113,7 @@ const MapUpdate = () => {
     });
   }, [zones, activeCategory, activeSubCategory, districtFilter, cityFilter, searchText]);
 
-  // -------- Handlers: Add --------
-  const handleAddChange = (e) => {
-    const { name, value } = e.target;
-    setAddData((p) => ({ ...p, [name]: value }));
-  };
-  const handleAddDistrict = (e) => {
-    setAddData((p) => ({ ...p, district: e.target.value, city: "" }));
-  };
+  // Add submit
   const handleAddSubmit = async (e) => {
     e.preventDefault();
     await addZone({
@@ -141,7 +134,7 @@ const MapUpdate = () => {
     });
   };
 
-  // -------- Handlers: Edit --------
+  // Edit open + submit
   const openEditModal = (zone) => {
     setEditId(zone.id);
     setEditData({
@@ -156,13 +149,7 @@ const MapUpdate = () => {
     });
     setShowEditForm(true);
   };
-  const handleEditChange = (e) => {
-    const { name, value } = e.target;
-    setEditData((p) => ({ ...p, [name]: value }));
-  };
-  const handleEditDistrict = (e) => {
-    setEditData((p) => ({ ...p, district: e.target.value, city: "" }));
-  };
+
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (!editId) return;
@@ -175,7 +162,7 @@ const MapUpdate = () => {
     setEditId(null);
   };
 
-  // -------- Handlers: Delete --------
+  // Delete
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this zone?")) {
       await deleteZone(id);
@@ -323,7 +310,7 @@ const MapUpdate = () => {
             )}
           </div>
 
-          {/* Rows under map */}
+          {/* Zones table */}
           <div className="bg-white rounded-lg shadow-sm border p-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">Zones</h3>
@@ -367,8 +354,12 @@ const MapUpdate = () => {
                       </td>
                       <td className="px-3 py-2">{z.district || "-"}</td>
                       <td className="px-3 py-2">{z.city || "-"}</td>
-                      <td className="px-3 py-2">{typeof z.latitude === "number" ? z.latitude.toFixed(6) : z.latitude}</td>
-                      <td className="px-3 py-2">{typeof z.longitude === "number" ? z.longitude.toFixed(6) : z.longitude}</td>
+                      <td className="px-3 py-2">
+                        {typeof z.latitude === "number" ? z.latitude.toFixed(6) : z.latitude}
+                      </td>
+                      <td className="px-3 py-2">
+                        {typeof z.longitude === "number" ? z.longitude.toFixed(6) : z.longitude}
+                      </td>
                       <td className="px-3 py-2">
                         <div className="flex items-center justify-end gap-2">
                           <button
@@ -399,276 +390,30 @@ const MapUpdate = () => {
 
       {/* Add Modal */}
       {showAddForm && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl p-6 overflow-y-auto max-h-[90vh]">
-            <h2 className="text-2xl font-bold mb-4 text-gray-900">Add New Zone</h2>
-            <form onSubmit={handleAddSubmit} className="space-y-4">
-              <MapMarking
-                lat={addData.latitude}
-                lng={addData.longitude}
-                onLocationSelect={(lat, lng) => setAddData((p) => ({ ...p, latitude: lat, longitude: lng }))}
-              />
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Name</label>
-                <input
-                  type="text"
-                  name="name"
-                  value={addData.name}
-                  onChange={handleAddChange}
-                  className="w-full border rounded-lg px-3 py-2 focus:ring-1 focus:ring-blue-500"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Category</label>
-                <select
-                  name="category"
-                  value={addData.category}
-                  onChange={handleAddChange}
-                  className="w-full border rounded-lg px-3 py-2 focus:ring-1 focus:ring-blue-500"
-                >
-                  <option value="danger">Danger Zone</option>
-                  <option value="safe">Safe Zone</option>
-                </select>
-              </div>
-
-              {addData.category === "danger" && (
-                <div>
-                  <label className="block text-sm font-medium mb-1">Danger Type</label>
-                  <select
-                    name="subCategory"
-                    value={addData.subCategory}
-                    onChange={handleAddChange}
-                    className="w-full border rounded-lg px-3 py-2 focus:ring-1 focus:ring-red-500"
-                  >
-                    <option value="">Select type</option>
-                    {dangerSubcategories.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {addData.category === "safe" && (
-                <div>
-                  <label className="block text-sm font-medium mb-1">Safe Zone Description</label>
-                <input
-                    type="text"
-                    name="safeDescription"
-                    value={addData.safeDescription}
-                    onChange={handleAddChange}
-                    className="w-full border rounded-lg px-3 py-2 focus:ring-1 focus:ring-green-500"
-                    placeholder="Describe why this zone is safe"
-                  />
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">District</label>
-                  <select
-                    name="district"
-                    value={addData.district}
-                    onChange={handleAddDistrict}
-                    className="w-full border rounded-lg px-3 py-2 focus:ring-1 focus:ring-blue-500"
-                  >
-                    <option value="">Select District</option>
-                    {districts.map((d) => (
-                      <option key={d} value={d}>
-                        {d}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">City</label>
-                  <select
-                    name="city"
-                    value={addData.city}
-                    onChange={handleAddChange}
-                    className="w-full border rounded-lg px-3 py-2 focus:ring-1 focus:ring-blue-500"
-                    disabled={!addData.district}
-                  >
-                    <option value="">Select City</option>
-                    {addData.district &&
-                      districtCities[addData.district]?.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Latitude</label>
-                  <input
-                    type="text"
-                    name="latitude"
-                    value={addData.latitude}
-                    readOnly
-                    className="w-full border rounded-lg px-3 py-2 bg-gray-100"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Longitude</label>
-                  <input
-                    type="text"
-                    name="longitude"
-                    value={addData.longitude}
-                    readOnly
-                    className="w-full border rounded-lg px-3 py-2 bg-gray-100"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setShowAddForm(false)} className="px-4 py-2 border rounded-lg hover:bg-gray-50">
-                  Cancel
-                </button>
-                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                  Save Zone
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <MapZoneForm
+          mode="add"
+          data={addData}
+          setData={setAddData}
+          onSubmit={handleAddSubmit}
+          onClose={() => setShowAddForm(false)}
+          districts={districts}
+          districtCities={districtCities}
+          dangerSubcategories={dangerSubcategories}
+        />
       )}
 
       {/* Edit Modal */}
       {showEditForm && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl p-6 overflow-y-auto max-h-[90vh]">
-            <h2 className="text-2xl font-bold mb-4 text-gray-900">Edit Zone</h2>
-            <form onSubmit={handleEditSubmit} className="space-y-4">
-              <MapMarking
-                lat={editData.latitude}
-                lng={editData.longitude}
-                onLocationSelect={(lat, lng) => setEditData((p) => ({ ...p, latitude: lat, longitude: lng }))}
-              />
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Name</label>
-                <input
-                  type="text"
-                  name="name"
-                  value={editData.name}
-                  onChange={handleEditChange}
-                  className="w-full border rounded-lg px-3 py-2 focus:ring-1 focus:ring-blue-500"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Category</label>
-                <select
-                  name="category"
-                  value={editData.category}
-                  onChange={handleEditChange}
-                  className="w-full border rounded-lg px-3 py-2 focus:ring-1 focus:ring-blue-500"
-                >
-                  <option value="danger">Danger Zone</option>
-                  <option value="safe">Safe Zone</option>
-                </select>
-              </div>
-
-              {editData.category === "danger" && (
-                <div>
-                  <label className="block text-sm font-medium mb-1">Danger Type</label>
-                  <select
-                    name="subCategory"
-                    value={editData.subCategory}
-                    onChange={handleEditChange}
-                    className="w-full border rounded-lg px-3 py-2 focus:ring-1 focus:ring-red-500"
-                  >
-                    <option value="">Select type</option>
-                    {dangerSubcategories.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {editData.category === "safe" && (
-                <div>
-                  <label className="block text-sm font-medium mb-1">Safe Zone Description</label>
-                  <input
-                    type="text"
-                    name="safeDescription"
-                    value={editData.safeDescription}
-                    onChange={handleEditChange}
-                    className="w-full border rounded-lg px-3 py-2 focus:ring-1 focus:ring-green-500"
-                    placeholder="Describe why this zone is safe"
-                  />
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">District</label>
-                  <select
-                    name="district"
-                    value={editData.district}
-                    onChange={handleEditDistrict}
-                    className="w-full border rounded-lg px-3 py-2 focus:ring-1 focus:ring-blue-500"
-                  >
-                    <option value="">Select District</option>
-                    {districts.map((d) => (
-                      <option key={d} value={d}>
-                        {d}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">City</label>
-                  <select
-                    name="city"
-                    value={editData.city}
-                    onChange={handleEditChange}
-                    className="w-full border rounded-lg px-3 py-2 focus:ring-1 focus:ring-blue-500"
-                    disabled={!editData.district}
-                  >
-                    <option value="">Select City</option>
-                    {editData.district &&
-                      districtCities[editData.district]?.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Latitude</label>
-                  <input type="text" name="latitude" value={editData.latitude} readOnly className="w-full border rounded-lg px-3 py-2 bg-gray-100" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Longitude</label>
-                  <input type="text" name="longitude" value={editData.longitude} readOnly className="w-full border rounded-lg px-3 py-2 bg-gray-100" />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setShowEditForm(false)} className="px-4 py-2 border rounded-lg hover:bg-gray-50">
-                  Cancel
-                </button>
-                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                  Update Zone
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <MapZoneForm
+          mode="edit"
+          data={editData}
+          setData={setEditData}
+          onSubmit={handleEditSubmit}
+          onClose={() => setShowEditForm(false)}
+          districts={districts}
+          districtCities={districtCities}
+          dangerSubcategories={dangerSubcategories}
+        />
       )}
     </div>
   );

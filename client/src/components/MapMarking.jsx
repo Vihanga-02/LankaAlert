@@ -6,14 +6,45 @@ const containerStyle = {
   height: "500px",
 };
 
-// Custom icons for danger subcategories
+// ✅ Custom icons for danger categories
 const dangerIcons = {
-  Floods: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png",
-  "Land Falling": "https://maps.google.com/mapfiles/ms/icons/orange-dot.png",
-  "High Wind": "https://maps.google.com/mapfiles/ms/icons/purple-dot.png",
-  "Power Cuts": "https://maps.google.com/mapfiles/ms/icons/yellow-dot.png",
-  "Water Cuts": "https://maps.google.com/mapfiles/ms/icons/ltblue-dot.png",
-  "Elephants Moving": "https://maps.google.com/mapfiles/ms/icons/pink-dot.png",
+  Floods: {
+    url: "/flood.png",
+    scaledSize: { w: 40, h: 40 },
+    anchor: { x: 20, y: 40 },
+  },
+  "Landslides": {
+    url: "/landslide.png",
+    scaledSize: { w: 40, h: 40 },
+    anchor: { x: 20, y: 40 },
+  },
+  "High Wind": {
+    url: "/highwind.png",
+    scaledSize: { w: 40, h: 40 },
+    anchor: { x: 20, y: 40 },
+  },
+  "Power Cuts": {
+    url: "/nopower.png",
+    scaledSize: { w: 40, h: 40 },
+    anchor: { x: 20, y: 40 },
+  },
+  "Water Cuts": {
+    url: "/nowater.png",
+    scaledSize: { w: 40, h: 40 },
+    anchor: { x: 20, y: 40 },
+  },
+  "Elephants Moving": {
+    url: "/elephant1.png",
+    scaledSize: { w: 40, h: 40 },
+    anchor: { x: 20, y: 40 },
+  },
+};
+
+// ✅ Custom icon for safe zones
+const safeIcon = {
+  url: "/safezone.png", // put in public/
+  scaledSize: { w: 40, h: 40 },
+  anchor: { x: 20, y: 40 },
 };
 
 function MapMarking({ lat, lng, onLocationSelect, zones = [] }) {
@@ -21,11 +52,15 @@ function MapMarking({ lat, lng, onLocationSelect, zones = [] }) {
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
   });
 
-  const [markerPos, setMarkerPos] = useState(lat && lng ? { lat: parseFloat(lat), lng: parseFloat(lng) } : null);
+  const [markerPos, setMarkerPos] = useState(
+    lat && lng ? { lat: parseFloat(lat), lng: parseFloat(lng) } : null
+  );
   const [selectedZone, setSelectedZone] = useState(null);
 
   useEffect(() => {
-    if (lat && lng) setMarkerPos({ lat: parseFloat(lat), lng: parseFloat(lng) });
+    if (lat && lng) {
+      setMarkerPos({ lat: parseFloat(lat), lng: parseFloat(lng) });
+    }
   }, [lat, lng]);
 
   if (!isLoaded) return <div>Loading Map...</div>;
@@ -42,22 +77,30 @@ function MapMarking({ lat, lng, onLocationSelect, zones = [] }) {
         onLocationSelect(newPos.lat.toFixed(6), newPos.lng.toFixed(6));
       }}
     >
-      {/* Marker for add form */}
+      {/* Marker for manual add */}
       {markerPos && onLocationSelect && <Marker position={markerPos} />}
 
-      {/* Display zones */}
+      {/* Display zones with icons */}
       {zones.map((zone) => {
-        const iconUrl =
-          zone.category === "danger"
-            ? dangerIcons[zone.subCategory] || "http://maps.google.com/mapfiles/ms/icons/red-dot.png"
-            : "http://maps.google.com/mapfiles/ms/icons/green-dot.png";
+        const config =
+          zone.category === "danger" && dangerIcons[zone.subCategory]
+            ? dangerIcons[zone.subCategory]
+            : safeIcon;
+
+        const iconConfig = {
+          url: config.url,
+          scaledSize: new window.google.maps.Size(config.scaledSize.w, config.scaledSize.h),
+          anchor: config.anchor
+            ? new window.google.maps.Point(config.anchor.x, config.anchor.y)
+            : undefined,
+        };
 
         return (
           <Marker
             key={zone.id}
             position={{ lat: zone.latitude, lng: zone.longitude }}
             onClick={() => setSelectedZone(zone)}
-            icon={{ url: iconUrl }}
+            icon={iconConfig}
           />
         );
       })}
