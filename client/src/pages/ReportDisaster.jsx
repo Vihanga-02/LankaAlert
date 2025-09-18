@@ -2,7 +2,9 @@ import React, { useState, useEffect } from "react";
 import { AlertTriangle, FileText } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useDisasterReports } from "../context/DisasterReportsContext";
-import { useRewards } from "../context/RewardContext"; 
+import { useRewards } from "../context/RewardContext";
+import { storage } from "../services/firebase";
+import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import DisasterReportForm from "../components/DisasterReportForm";
 
 const ReportDisaster = () => {
@@ -18,6 +20,7 @@ const ReportDisaster = () => {
     locationDescription: "",
     latitude: "",
     longitude: "",
+    images: [], // Add images array to form data
   });
 
   const [currentPoints, setCurrentPoints] = useState(0);
@@ -34,14 +37,133 @@ const ReportDisaster = () => {
     setCurrentPoints(totalPoints);
   }, [totalPoints]);
 
+  // Image upload function
+  const uploadDisasterImages = async (images, reportId, userEmail) => {
+    if (!images || images.length === 0) {
+      return [];
+    }
+
+    const uploadPromises = images.map(async (image, index) => {
+      try {
+        // Create unique filename
+        const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+        const fileName = `${timestamp}_${index}_${image.name}`;
+        const imagePath = `disaster/${reportId}/${fileName}`;
+
+        // Create storage reference
+        const imageRef = ref(storage, imagePath);
+
+        // Upload base64 string
+        const snapshot = await uploadString(imageRef, image.base64, "data_url");
+
+        // Get download URL
+        const downloadURL = await getDownloadURL(snapshot.ref);
+
+        // Return only the URL
+        return downloadURL;
+      } catch (error) {
+        console.error(`Error uploading image ${image.name}:`, error);
+        throw new Error(`Failed to upload ${image.name}: ${error.message}`);
+      }
+    });
+
+    try {
+      const uploadedImages = await Promise.all(uploadPromises);
+      console.log(
+        `Successfully uploaded ${uploadedImages.length} images for report ${reportId}`
+      );
+      return uploadedImages;
+    } catch (error) {
+      console.error("Error uploading disaster images:", error);
+      throw error;
+    }
+  };
+
+  // Generate unique report ID
+  const generateReportId = (userEmail) => {
+    const timestamp = Date.now();
+    const userHash = btoa(userEmail)
+      .replace(/[^a-zA-Z0-9]/g, "")
+      .substring(0, 8);
+    return `disaster_${userHash}_${timestamp}`;
+  };
+
+  // Calculate estimated points for current form
+  const calculateEstimatedPoints = () => {
+    let points = 50; // Base verified report points
+
+    // +20 points for reports with photos
+    if (formData.images && formData.images.length > 0) {
+      points += 20;
+    }
+
+    // +30 points for critical priority (high severity)
+    if (formData.severity === "high") {
+      points += 30;
+    }
+
+    // +40 points for first report (assume it might be first for estimation)
+    // Note: We can't accurately determine this without checking existing reports
+    // but we can show it as potential bonus
+
+    return points;
+  };
+
   const handleSubmit = async () => {
     try {
       console.log("Form Data Submitted:", formData);
 
-      // 1️⃣ Save report in Firestore
-      await addReport(formData, user);
+      // Validation
+      if (!formData.disasterType || !formData.title || !formData.description) {
+        alert(
+          "Please fill in all required fields (Disaster Type, Title, Description)"
+        );
+        return;
+      }
 
-      // 2️⃣ Give 50 points to reporter
+      if (!formData.latitude || !formData.longitude) {
+        alert("Please provide location information");
+        return;
+      }
+
+      // Show loading state
+      const submitButton = document.querySelector(
+        'button[onClick="handleSubmit"]'
+      );
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = "Submitting...";
+      }
+
+      // Generate unique report ID for image storage
+      const reportId = generateReportId(user.email);
+
+      let uploadedImages = [];
+
+      // Upload images if they exist
+      if (formData.images && formData.images.length > 0) {
+        console.log(
+          `Uploading ${formData.images.length} images for report ${reportId}`
+        );
+        uploadedImages = await uploadDisasterImages(
+          formData.images,
+          reportId,
+          user.email
+        );
+      }
+
+      // Prepare form data with uploaded image URLs
+      const reportDataToSubmit = {
+        ...formData,
+        images: uploadedImages,
+        imageCount: uploadedImages.length,
+        reportId: reportId,
+      };
+
+      // 1️⃣ Save report in Firestore (with images uploaded to Firebase Storage)
+      await addReport(reportDataToSubmit, user);
+
+      // 2️⃣ Give 50 points to reporter (+ bonus for images)
       await givePoints(user); // givePoints internally calls fetchRewards
 
       // 3️⃣ Reset form
@@ -53,12 +175,26 @@ const ReportDisaster = () => {
         locationDescription: "",
         latitude: "",
         longitude: "",
+        images: [],
       });
 
-      alert("✅ Disaster Report submitted & 50 points awarded!");
+      const calculatedPoints = calculateEstimatedPoints();
+      const imageBonus = formData.images?.length > 0 ? " (+20 for images)" : "";
+      const severityBonus =
+        formData.severity === "high" ? " (+30 for critical)" : "";
+      alert(
+        `✅ Disaster Report submitted & ${calculatedPoints} points awarded!${imageBonus}${severityBonus}`
+      );
     } catch (err) {
       alert("❌ Failed to submit report. Check console for details.");
       console.error(err);
+    } finally {
+      // Reset button state
+      const submitButton = document.querySelector("button");
+      if (submitButton && submitButton.textContent === "Submitting...") {
+        submitButton.disabled = false;
+        submitButton.textContent = "Submit Report";
+      }
     }
   };
 
@@ -68,10 +204,12 @@ const ReportDisaster = () => {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center bg-white rounded-lg shadow-md p-8">
           <AlertTriangle className="h-16 w-16 text-yellow-600 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Access Restricted</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            Access Restricted
+          </h2>
           <p className="text-gray-600 mb-6">
-            This page is only available to verified reporters. Apply as a reporter during
-            registration to access disaster reporting features.
+            This page is only available to verified reporters. Apply as a
+            reporter during registration to access disaster reporting features.
           </p>
           <button
             onClick={() => window.history.back()}
@@ -89,7 +227,9 @@ const ReportDisaster = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">Report Disaster</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">
+            Report Disaster
+          </h1>
           <p className="text-lg text-gray-600">
             Submit official disaster reports to help your community stay safe
           </p>
@@ -107,7 +247,9 @@ const ReportDisaster = () => {
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <span className="font-semibold text-green-900">{user.name}</span>
+                <span className="font-semibold text-green-900">
+                  {user.name}
+                </span>
                 <span className="bg-green-600 text-white px-2 py-1 rounded-full text-xs font-medium">
                   Verified Reporter
                 </span>
@@ -156,7 +298,9 @@ const ReportDisaster = () => {
 
             {/* Points System */}
             <div className="bg-blue-50 rounded-lg p-6">
-              <h3 className="text-lg font-bold text-blue-900 mb-4">Points System</h3>
+              <h3 className="text-lg font-bold text-blue-900 mb-4">
+                Points System
+              </h3>
               <div className="space-y-2 text-sm text-blue-800">
                 <div className="flex justify-between">
                   <span>Verified Report:</span>
@@ -167,13 +311,28 @@ const ReportDisaster = () => {
                   <span className="font-semibold">+20 points</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Critical Priority:</span>
+                  <span>Critical Priority (High):</span>
                   <span className="font-semibold">+30 points</span>
                 </div>
                 <div className="flex justify-between">
                   <span>First Report:</span>
                   <span className="font-semibold">+40 points</span>
                 </div>
+                <hr className="my-3 border-blue-200" />
+                <div className="flex justify-between font-bold text-blue-900">
+                  <span>Your Estimated Points:</span>
+                  <span className="text-lg">{calculateEstimatedPoints()}</span>
+                </div>
+                {formData.images?.length > 0 && (
+                  <p className="text-xs text-blue-600 mt-1">
+                    ✓ Photo bonus included
+                  </p>
+                )}
+                {formData.severity === "high" && (
+                  <p className="text-xs text-blue-600">
+                    ✓ Critical priority bonus included
+                  </p>
+                )}
               </div>
             </div>
           </div>

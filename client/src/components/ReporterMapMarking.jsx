@@ -61,8 +61,8 @@ const ReporterMapMarking = ({ disasterType, latitude, longitude, onLocationSelec
     const colors = {
       flood: "blue",
       landslide: "brown",
-      storm: "purple",
-      drought: "orange",
+      high_wind: "purple",
+      power_cuts: "orange",
       other: "red",
     };
     const color = colors[type] || "gray";

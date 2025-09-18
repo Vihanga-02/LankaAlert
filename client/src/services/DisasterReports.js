@@ -1,33 +1,38 @@
 // services/DisasterReports.js
-import { db } from "./firebase"; 
-import { 
-  collection, 
-  addDoc, 
-  getDocs, 
-  getDoc, 
-  updateDoc, 
-  deleteDoc, 
-  doc, 
-  serverTimestamp 
+import { db } from "./firebase";
+import {
+  collection,
+  addDoc,
+  getDocs,
+  getDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  serverTimestamp,
 } from "firebase/firestore";
 
 const collectionName = "disasterReports";
 const disasterCollection = collection(db, collectionName);
 
 // ✅ CREATE - add new disaster report
-// Now attaches reporterId + reporterEmail from logged-in user
+// Now attaches reporterId + reporterEmail from logged-in user and handles images
 export const addDisasterReport = async (reportData, currentUser) => {
   try {
     if (!currentUser?.uid || !currentUser?.email) {
       throw new Error("User not logged in");
     }
 
-    const docRef = await addDoc(disasterCollection, {
+    // Prepare report data (images are already processed and uploaded)
+    const reportDataToSave = {
       ...reportData,
       reporterId: currentUser.uid,
-      reporterEmail: currentUser.email,   // 👈 saved to Firestore
+      reporterEmail: currentUser.email,
       createdAt: serverTimestamp(),
-    });
+    };
+
+    const docRef = await addDoc(disasterCollection, reportDataToSave);
+
+    console.log(`Report created with document ID: ${docRef.id}`);
     return docRef.id;
   } catch (error) {
     console.error("Error adding disaster report:", error);

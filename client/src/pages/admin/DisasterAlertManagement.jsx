@@ -8,18 +8,46 @@ import { useMapZone } from "../../context/MapZoneContext";
 import DisasterAlertForm from "../../components/DisasterAlertForm";
 import MapZoneForm from "../../components/MapZoneForm";
 import CreatedDisasterAlerts from "../../components/CreatedDisasterAlerts";
+import NotificationDropdown from "../../components/NotificationDropdown";
 
 // -------- Constants --------
 const districts = [
-  "Colombo", "Gampaha", "Kalutara", "Kandy", "Matale", "Nuwara Eliya",
-  "Galle", "Matara", "Hambantota", "Jaffna", "Kilinochchi", "Mannar",
-  "Vavuniya", "Mullaitivu", "Batticaloa", "Ampara", "Trincomalee",
-  "Kurunegala", "Puttalam", "Anuradhapura", "Polonnaruwa", "Badulla",
-  "Moneragala", "Ratnapura", "Kegalle"
+  "Colombo",
+  "Gampaha",
+  "Kalutara",
+  "Kandy",
+  "Matale",
+  "Nuwara Eliya",
+  "Galle",
+  "Matara",
+  "Hambantota",
+  "Jaffna",
+  "Kilinochchi",
+  "Mannar",
+  "Vavuniya",
+  "Mullaitivu",
+  "Batticaloa",
+  "Ampara",
+  "Trincomalee",
+  "Kurunegala",
+  "Puttalam",
+  "Anuradhapura",
+  "Polonnaruwa",
+  "Badulla",
+  "Moneragala",
+  "Ratnapura",
+  "Kegalle",
 ];
 
 const districtCities = {
-  Colombo: ["Colombo", "Homagama", "Awissawella", "Kaduwela", "Moratuwa", "Maharagama"],
+  Colombo: [
+    "Colombo",
+    "Homagama",
+    "Awissawella",
+    "Kaduwela",
+    "Moratuwa",
+    "Maharagama",
+  ],
   Gampaha: ["Negombo", "Ja-Ela", "Wattala", "Kelaniya", "Ragama"],
   Kalutara: ["Kalutara", "Beruwala", "Panadura", "Horana", "Matugama"],
   Kandy: ["Kandy", "Peradeniya", "Gampola", "Akurana", "Kadugannawa"],
@@ -32,18 +60,42 @@ const districtCities = {
   Kilinochchi: ["Kilinochchi", "Pooneryn", "Karachchi", "Elephant Pass"],
   Mannar: ["Mannar", "Musali", "Madhu", "Nanattan"],
   Vavuniya: ["Vavuniya", "Vavuniya North", "Vavuniya South", "Vavuniya Urban"],
-  Mullaitivu: ["Mullaitivu", "Oddusuddan", "Puthukkudiyiruppu", "Maritimepattu"],
+  Mullaitivu: [
+    "Mullaitivu",
+    "Oddusuddan",
+    "Puthukkudiyiruppu",
+    "Maritimepattu",
+  ],
   Batticaloa: ["Batticaloa", "Kalmunai", "Eravur", "Kalkudah", "Manmunai"],
   Ampara: ["Ampara", "Kalmunai", "Samanthurai", "Padiyathalawa", "Uhana"],
   Trincomalee: ["Trincomalee", "Kinniya", "Muttur", "Verugal", "Seruwila"],
-  Kurunegala: ["Kurunegala", "Maho", "Dambulla", "Alawwa", "Kuliyapitiya", "Polgahawela"],
+  Kurunegala: [
+    "Kurunegala",
+    "Maho",
+    "Dambulla",
+    "Alawwa",
+    "Kuliyapitiya",
+    "Polgahawela",
+  ],
   Puttalam: ["Puttalam", "Chilaw", "Nawagathena", "Kalpitiya"],
-  Anuradhapura: ["Anuradhapura", "Mihintale", "Padaviya", "Kebithigollewa", "Thalawa"],
+  Anuradhapura: [
+    "Anuradhapura",
+    "Mihintale",
+    "Padaviya",
+    "Kebithigollewa",
+    "Thalawa",
+  ],
   Polonnaruwa: ["Polonnaruwa", "Dimbulagala", "Lankapura", "Welikanda"],
   Badulla: ["Badulla", "Hali-Ela", "Ella", "Mahiyanganaya", "Passara"],
   Moneragala: ["Moneragala", "Buttala", "Bibile", "Medagama", "Kataragama"],
   Ratnapura: ["Ratnapura", "Balangoda", "Elapatha", "Kuruwita", "Embilipitiya"],
-  Kegalle: ["Kegalle", "Deraniyagala", "Ruwanwella", "Mawanella", "Yatiyantota"]
+  Kegalle: [
+    "Kegalle",
+    "Deraniyagala",
+    "Ruwanwella",
+    "Mawanella",
+    "Yatiyantota",
+  ],
 };
 
 const dangerSubcategories = [
@@ -76,7 +128,9 @@ const DisasterAlertManagement = () => {
   const filteredReports = reports.filter(
     (report) =>
       report.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      report.locationDescription?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      report.locationDescription
+        ?.toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
       report.disasterType?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -138,12 +192,17 @@ const DisasterAlertManagement = () => {
             Disaster Management Dashboard
           </h1>
           <p className="mt-2 text-gray-600">
-            Monitor disaster reports, create alerts, and mark danger zones on the map
+            Monitor disaster reports, create alerts, and mark danger zones on
+            the map
           </p>
         </div>
-        <button className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-          <Plus className="h-5 w-5 mr-2" /> Add Manual Entry
-        </button>
+        <div className="mt-4 sm:mt-0 flex items-center space-x-4">
+          {/* Notification Bell */}
+          <NotificationDropdown />
+          <button className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+            <Plus className="h-5 w-5 mr-2" /> Add Manual Entry
+          </button>
+        </div>
       </div>
 
       {/* Navigation */}
@@ -208,7 +267,9 @@ const DisasterAlertManagement = () => {
                       <h3 className="text-lg font-semibold text-gray-900">
                         {report.title}
                       </h3>
-                      <p className="text-gray-600">{report.locationDescription}</p>
+                      <p className="text-gray-600">
+                        {report.locationDescription}
+                      </p>
                     </div>
                     <span
                       className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getSeverityColor(
@@ -223,13 +284,17 @@ const DisasterAlertManagement = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                     <div className="bg-gray-50 p-3 rounded-lg">
-                      <div className="text-sm font-medium text-gray-600">Reporter</div>
+                      <div className="text-sm font-medium text-gray-600">
+                        Reporter
+                      </div>
                       <div className="text-lg font-semibold text-gray-600">
                         {report.reporterEmail}
                       </div>
                     </div>
                     <div className="bg-gray-50 p-3 rounded-lg">
-                      <div className="text-sm font-medium text-gray-600">Date</div>
+                      <div className="text-sm font-medium text-gray-600">
+                        Date
+                      </div>
                       <div className="text-lg font-semibold text-gray-600">
                         {report.createdAt?.toDate
                           ? report.createdAt.toDate().toLocaleString()
@@ -237,13 +302,17 @@ const DisasterAlertManagement = () => {
                       </div>
                     </div>
                     <div className="bg-gray-50 p-3 rounded-lg">
-                      <div className="text-sm font-medium text-gray-600">Latitude</div>
+                      <div className="text-sm font-medium text-gray-600">
+                        Latitude
+                      </div>
                       <div className="text-lg font-semibold text-gray-600">
                         {report.latitude || "N/A"}
                       </div>
                     </div>
                     <div className="bg-gray-50 p-3 rounded-lg">
-                      <div className="text-sm font-medium text-gray-600">Longitude</div>
+                      <div className="text-sm font-medium text-gray-600">
+                        Longitude
+                      </div>
                       <div className="text-lg font-semibold text-gray-600">
                         {report.longitude || "N/A"}
                       </div>
