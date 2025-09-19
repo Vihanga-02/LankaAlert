@@ -1,7 +1,13 @@
-import React, { useState } from 'react';
-import { Phone, MessageSquare, MapPin, Clock, AlertTriangle, Send, User, Home, Heart } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Phone, MessageSquare, MapPin, Clock, AlertTriangle, Send, User, Home, Heart, Check } from 'lucide-react';
+import { createEmergencyRequest } from "../services/emergencyService";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "../services/firebase";
 
 const EmergencyHelp = () => {
+  const navigate = useNavigate();
+
   const [emergencyForm, setEmergencyForm] = useState({
     name: '',
     phone: '',
@@ -9,8 +15,25 @@ const EmergencyHelp = () => {
     emergencyType: '',
     description: '',
     urgency: 'high',
-    needsHelp: []
+    needsHelp: [],
+    foodItems: []
   });
+
+  const [inventoryItems, setInventoryItems] = useState([]);
+
+  // Fetch inventory items from Firebase
+  useEffect(() => {
+    const fetchInventory = async () => {
+      try {
+        const snapshot = await getDocs(collection(db, "inventoryItems"));
+        const items = snapshot.docs.map(doc => doc.data().name);
+        setInventoryItems(items);
+      } catch (err) {
+        console.error("Failed to fetch inventory:", err);
+      }
+    };
+    fetchInventory();
+  }, []);
 
   const emergencyTypes = [
     { id: 'flood', name: 'Flood', icon: '🌊' },
@@ -46,11 +69,24 @@ const EmergencyHelp = () => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Handle emergency request
-    console.log('Emergency request:', emergencyForm);
-    alert('Emergency request submitted successfully! Help is on the way.');
+    try {
+      const docId = await createEmergencyRequest(emergencyForm);
+      navigate("/confirmation", { state: { docId } });
+      setEmergencyForm({
+        name: "",
+        phone: "",
+        location: "",
+        emergencyType: "",
+        description: "",
+        urgency: "high",
+        needsHelp: [],
+        foodItems: []
+      });
+    } catch (error) {
+      alert("Failed to submit emergency request. Please try again.");
+    }
   };
 
   const getUrgencyColor = (urgency) => {
@@ -104,14 +140,12 @@ const EmergencyHelp = () => {
           <div className="lg:col-span-2">
             <div className="bg-white rounded-lg shadow-md p-6">
               <h3 className="text-xl font-bold text-gray-900 mb-6">Submit Emergency Request</h3>
-              
+
               <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Personal Information */}
+                {/* Personal Info */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Full Name *
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
                     <input
                       type="text"
                       name="name"
@@ -123,9 +157,7 @@ const EmergencyHelp = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Phone Number *
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
                     <input
                       type="tel"
                       name="phone"
@@ -140,9 +172,7 @@ const EmergencyHelp = () => {
 
                 {/* Location */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Current Location *
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Current Location *</label>
                   <input
                     type="text"
                     name="location"
@@ -156,9 +186,7 @@ const EmergencyHelp = () => {
 
                 {/* Emergency Type */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Emergency Type *
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Emergency Type *</label>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     {emergencyTypes.map((type) => (
                       <label
@@ -186,9 +214,7 @@ const EmergencyHelp = () => {
 
                 {/* Urgency Level */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Urgency Level
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Urgency Level</label>
                   <select
                     name="urgency"
                     value={emergencyForm.urgency}
@@ -212,25 +238,74 @@ const EmergencyHelp = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Type of Help Needed (Select all that apply)
                   </label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3">
                     {helpNeeds.map((need) => (
-                      <label
-                        key={need.id}
-                        className={`flex items-center space-x-3 p-3 border rounded-lg cursor-pointer transition-colors ${
-                          emergencyForm.needsHelp.includes(need.id)
-                            ? 'border-blue-500 bg-blue-50'
-                            : 'border-gray-300 hover:bg-gray-50'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={emergencyForm.needsHelp.includes(need.id)}
-                          onChange={() => handleNeedToggle(need.id)}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        />
-                        {need.icon}
-                        <span className="text-sm font-medium">{need.name}</span>
-                      </label>
+                      <div key={need.id} className="flex flex-col">
+                        <label
+                          className={`flex items-center space-x-3 p-3 border rounded-lg cursor-pointer transition-colors ${
+                            emergencyForm.needsHelp.includes(need.id)
+                              ? 'border-blue-500 bg-blue-50'
+                              : 'border-gray-300 hover:bg-gray-50'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={emergencyForm.needsHelp.includes(need.id)}
+                            onChange={() => handleNeedToggle(need.id)}
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          {need.icon}
+                          <span className="text-sm font-medium">{need.name}</span>
+                        </label>
+
+                        {/* Food & Water vertical list with quantity input */}
+                        {need.id === 'food' && emergencyForm.needsHelp.includes('food') && (
+                          <div className="mt-3 space-y-3 p-3 border border-gray-300 rounded-lg bg-gray-50">
+                            {inventoryItems.length > 0 ? inventoryItems.map((item) => (
+                              <div key={item} className="flex items-center justify-between bg-white p-3 rounded-lg border border-gray-300">
+                                <div className="flex items-center space-x-2">
+                                  <input
+                                    type="checkbox"
+                                    checked={emergencyForm.foodItems.some(f => f.name === item)}
+                                    onChange={() => {
+                                      if (emergencyForm.foodItems.some(f => f.name === item)) {
+                                        setEmergencyForm({
+                                          ...emergencyForm,
+                                          foodItems: emergencyForm.foodItems.filter(f => f.name !== item)
+                                        });
+                                      } else {
+                                        setEmergencyForm({
+                                          ...emergencyForm,
+                                          foodItems: [...emergencyForm.foodItems, { name: item, quantity: 1 }]
+                                        });
+                                      }
+                                    }}
+                                    className="rounded border-gray-400 text-blue-600 focus:ring-blue-500"
+                                  />
+                                  <span className="text-gray-800 font-medium">{item}</span>
+                                </div>
+                                {emergencyForm.foodItems.some(f => f.name === item) && (
+                                  <input
+                                    type="number"
+                                    min={1}
+                                    value={emergencyForm.foodItems.find(f => f.name === item)?.quantity || 1}
+                                    onChange={(e) => {
+                                      const qty = parseInt(e.target.value, 10) || 1;
+                                      setEmergencyForm({
+                                        ...emergencyForm,
+                                        foodItems: emergencyForm.foodItems.map(f =>
+                                          f.name === item ? { ...f, quantity: qty } : f
+                                        )
+                                      });
+                                    }}
+                                    className="w-24 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  />
+                                )}
+                              </div>
+                            )) : <p className="text-gray-500 text-sm">Loading inventory items...</p>}
+                          </div>
+                        )}
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -251,7 +326,7 @@ const EmergencyHelp = () => {
                   />
                 </div>
 
-                {/* Submit Button */}
+                {/* Submit */}
                 <button
                   type="submit"
                   className="w-full bg-red-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-red-700 transition-colors flex items-center justify-center space-x-2"
@@ -265,26 +340,16 @@ const EmergencyHelp = () => {
 
           {/* Quick Actions & Info */}
           <div className="space-y-6">
-            {/* Quick Actions */}
             <div className="bg-white rounded-lg shadow-md p-6">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h3>
               <div className="space-y-3">
-                <button className="w-full bg-red-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-red-700 transition-colors flex items-center justify-center space-x-2">
-                  <Phone className="h-5 w-5" />
-                  <span>Call 119</span>
-                </button>
                 <button className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2">
                   <MessageSquare className="h-5 w-5" />
                   <span>Chat with Support</span>
                 </button>
-                <button className="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center space-x-2">
-                  <MapPin className="h-5 w-5" />
-                  <span>Share Location</span>
-                </button>
               </div>
             </div>
 
-            {/* Response Time Info */}
             <div className="bg-blue-50 rounded-lg p-6">
               <h3 className="text-lg font-bold text-blue-900 mb-4 flex items-center">
                 <Clock className="h-5 w-5 mr-2" />
@@ -310,7 +375,6 @@ const EmergencyHelp = () => {
               </div>
             </div>
 
-            {/* Safety Tips */}
             <div className="bg-yellow-50 rounded-lg p-6">
               <h3 className="text-lg font-bold text-yellow-900 mb-4">Safety Tips</h3>
               <ul className="space-y-2 text-sm text-yellow-800">
