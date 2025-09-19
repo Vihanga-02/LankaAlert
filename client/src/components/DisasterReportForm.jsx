@@ -1,5 +1,41 @@
 // components/DisasterReportForm.jsx
-import React, { useState, useEffect } from "react";
+//
+// USAGE EXAMPLE:
+//
+// import { useRef } from 'react';
+//
+// const ParentComponent = () => {
+//   const formRef = useRef();
+//   const [formData, setFormData] = useState({...});
+//
+//   const handleSubmit = () => {
+//     if (formRef.current?.validateForm()) {
+//       // Form is valid, proceed with submission
+//       console.log('Form is valid!', formData);
+//     } else {
+//       // Form has errors, they will be displayed automatically
+//       console.log('Form has errors:', formRef.current?.getErrors());
+//     }
+//   };
+//
+//   return (
+//     <div>
+//       <DisasterReportForm
+//         ref={formRef}
+//         formData={formData}
+//         setFormData={setFormData}
+//       />
+//       <button onClick={handleSubmit}>Submit</button>
+//     </div>
+//   );
+// };
+//
+import React, {
+  useState,
+  useEffect,
+  forwardRef,
+  useImperativeHandle,
+} from "react";
 import { MapPin, Camera, X, Upload } from "lucide-react";
 import ReporterMapMarking from "./ReporterMapMarking"; // your map component
 
@@ -11,13 +47,141 @@ const disasterTypes = [
   { id: "other", name: "Other", icon: "⚠️" },
 ];
 
-const DisasterReportForm = ({ formData, setFormData }) => {
+const DisasterReportForm = forwardRef(({ formData, setFormData }, ref) => {
   const [mapLocation, setMapLocation] = useState({
     latitude: "",
     longitude: "",
   });
   const [selectedImages, setSelectedImages] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
+
+  // Validation states
+  const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
+
+  // Expose validation function to parent component
+  useImperativeHandle(ref, () => ({
+    validateForm: () => {
+      const isValid = validateAllFields();
+      // Mark all fields as touched to show validation errors
+      setTouched({
+        disasterType: true,
+        title: true,
+        description: true,
+        severity: true,
+        locationDescription: true,
+        latitude: true,
+        longitude: true,
+      });
+      return isValid;
+    },
+    getErrors: () => errors,
+    isFormValid: () => Object.keys(errors).length === 0,
+  }));
+
+  // Validation rules
+  const validateField = (name, value) => {
+    const fieldErrors = {};
+
+    switch (name) {
+      case "disasterType":
+        if (!value || value.trim() === "") {
+          fieldErrors.disasterType = "Please select a disaster type";
+        }
+        break;
+
+      case "title":
+        if (!value || value.trim() === "") {
+          fieldErrors.title = "Disaster title is required";
+        } else if (value.trim().length < 10) {
+          fieldErrors.title = "Title must be at least 10 characters long";
+        } else if (value.trim().length > 100) {
+          fieldErrors.title = "Title must not exceed 100 characters";
+        }
+        break;
+
+      case "description":
+        if (!value || value.trim() === "") {
+          fieldErrors.description = "Description is required";
+        } else if (value.trim().length < 20) {
+          fieldErrors.description =
+            "Description must be at least 20 characters long";
+        } else if (value.trim().length > 1000) {
+          fieldErrors.description =
+            "Description must not exceed 1000 characters";
+        }
+        break;
+
+      case "severity":
+        if (!value || value.trim() === "") {
+          fieldErrors.severity = "Please select a severity level";
+        }
+        break;
+
+      case "locationDescription":
+        if (!value || value.trim() === "") {
+          fieldErrors.locationDescription = "Location description is required";
+        } else if (value.trim().length < 5) {
+          fieldErrors.locationDescription =
+            "Location description must be at least 5 characters long";
+        }
+        break;
+
+      case "latitude":
+        if (!value || value.trim() === "") {
+          fieldErrors.latitude = "Latitude is required";
+        } else {
+          const lat = parseFloat(value);
+          if (isNaN(lat) || lat < -90 || lat > 90) {
+            fieldErrors.latitude = "Latitude must be between -90 and 90";
+          }
+        }
+        break;
+
+      case "longitude":
+        if (!value || value.trim() === "") {
+          fieldErrors.longitude = "Longitude is required";
+        } else {
+          const lng = parseFloat(value);
+          if (isNaN(lng) || lng < -180 || lng > 180) {
+            fieldErrors.longitude = "Longitude must be between -180 and 180";
+          }
+        }
+        break;
+
+      default:
+        break;
+    }
+
+    return fieldErrors;
+  };
+
+  // Validate all fields
+  const validateAllFields = () => {
+    const allErrors = {};
+    const fields = [
+      "disasterType",
+      "title",
+      "description",
+      "severity",
+      "locationDescription",
+      "latitude",
+      "longitude",
+    ];
+
+    fields.forEach((field) => {
+      const fieldErrors = validateField(field, formData[field]);
+      Object.assign(allErrors, fieldErrors);
+    });
+
+    setErrors(allErrors);
+    return Object.keys(allErrors).length === 0;
+  };
+
+  // Check if form is valid for submission
+  const isFormValid = () => {
+    return validateAllFields();
+  };
 
   // Initialize images from formData when editing existing reports
   useEffect(() => {
@@ -78,7 +242,33 @@ const DisasterReportForm = ({ formData, setFormData }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+
+    // Update form data
     setFormData((prev) => ({ ...prev, [name]: value }));
+
+    // Mark field as touched
+    setTouched((prev) => ({ ...prev, [name]: true }));
+
+    // Validate field and update errors
+    const fieldErrors = validateField(name, value);
+    setErrors((prev) => ({
+      ...prev,
+      ...fieldErrors,
+      // Remove error for this field if validation passes
+      [name]: fieldErrors[name] || undefined,
+    }));
+  };
+
+  // Handle field blur to show validation errors
+  const handleBlur = (e) => {
+    const { name } = e.target;
+    setTouched((prev) => ({ ...prev, [name]: true }));
+
+    const fieldErrors = validateField(name, formData[name]);
+    setErrors((prev) => ({
+      ...prev,
+      ...fieldErrors,
+    }));
   };
 
   const handleCurrentLocation = () => {
@@ -209,6 +399,23 @@ const DisasterReportForm = ({ formData, setFormData }) => {
 
   return (
     <div className="max-w-2xl space-y-6 mx-auto">
+      {/* Validation Summary - Only show if there are errors and some fields are touched */}
+      {Object.keys(errors).length > 0 && Object.keys(touched).length > 0 && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <h3 className="text-sm font-medium text-red-800 mb-2">
+            Please fix the following errors:
+          </h3>
+          <ul className="text-sm text-red-700 space-y-1">
+            {Object.entries(errors).map(([field, error]) => (
+              <li key={field} className="flex items-center">
+                <span className="w-2 h-2 bg-red-400 rounded-full mr-2"></span>
+                {error}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {/* Disaster Information */}
       <div className="bg-white shadow-md rounded-lg p-6">
         <h2 className="text-lg font-semibold mb-4">Disaster Information</h2>
@@ -216,7 +423,7 @@ const DisasterReportForm = ({ formData, setFormData }) => {
         {/* Disaster Type */}
         <div className="mb-4">
           <label className="block text-sm font-medium mb-2">
-            Disaster Type
+            Disaster Type <span className="text-red-500">*</span>
           </label>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {disasterTypes.map((type) => (
@@ -225,6 +432,8 @@ const DisasterReportForm = ({ formData, setFormData }) => {
                 className={`flex items-center gap-2 border rounded-lg p-3 cursor-pointer hover:bg-gray-50 ${
                   formData.disasterType === type.id
                     ? "border-blue-500 bg-blue-50"
+                    : errors.disasterType && touched.disasterType
+                    ? "border-red-500 bg-red-50"
                     : "border-gray-300"
                 }`}
               >
@@ -234,6 +443,7 @@ const DisasterReportForm = ({ formData, setFormData }) => {
                   value={type.id}
                   checked={formData.disasterType === type.id}
                   onChange={handleChange}
+                  onBlur={handleBlur}
                   className="hidden"
                 />
                 <span className="text-xl">{type.icon}</span>
@@ -241,51 +451,88 @@ const DisasterReportForm = ({ formData, setFormData }) => {
               </label>
             ))}
           </div>
+          {errors.disasterType && touched.disasterType && (
+            <p className="text-red-500 text-sm mt-1">{errors.disasterType}</p>
+          )}
         </div>
 
         {/* Title */}
         <div className="mb-4">
           <label className="block text-sm font-medium mb-2">
-            Disaster Title
+            Disaster Title <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
             name="title"
             value={formData.title}
             onChange={handleChange}
+            onBlur={handleBlur}
             placeholder="e.g., Heavy flooding in Colombo"
-            className="w-full border border-gray-300 rounded-lg p-2"
+            className={`w-full border rounded-lg p-2 ${
+              errors.title && touched.title
+                ? "border-red-500 bg-red-50 focus:border-red-500"
+                : "border-gray-300 focus:border-blue-500"
+            } focus:outline-none focus:ring-1 focus:ring-blue-500`}
           />
+          {errors.title && touched.title && (
+            <p className="text-red-500 text-sm mt-1">{errors.title}</p>
+          )}
+          <p className="text-gray-500 text-xs mt-1">
+            {formData.title ? formData.title.length : 0}/100 characters
+          </p>
         </div>
 
         {/* Severity */}
         <div className="mb-4">
           <label className="block text-sm font-medium mb-2">
-            Severity Level
+            Severity Level <span className="text-red-500">*</span>
           </label>
           <select
             name="severity"
             value={formData.severity}
             onChange={handleChange}
-            className="w-full border border-gray-300 rounded-lg p-2"
+            onBlur={handleBlur}
+            className={`w-full border rounded-lg p-2 ${
+              errors.severity && touched.severity
+                ? "border-red-500 bg-red-50 focus:border-red-500"
+                : "border-gray-300 focus:border-blue-500"
+            } focus:outline-none focus:ring-1 focus:ring-blue-500`}
           >
+            <option value="">Select severity level</option>
             <option value="low">Low</option>
             <option value="medium">Medium</option>
             <option value="high">High</option>
           </select>
+          {errors.severity && touched.severity && (
+            <p className="text-red-500 text-sm mt-1">{errors.severity}</p>
+          )}
         </div>
 
         {/* Description */}
-        <div>
-          <label className="block text-sm font-medium mb-2">Description</label>
+        <div className="mb-4">
+          <label className="block text-sm font-medium mb-2">
+            Description <span className="text-red-500">*</span>
+          </label>
           <textarea
             name="description"
             value={formData.description}
             onChange={handleChange}
+            onBlur={handleBlur}
             placeholder="Provide detailed information about the disaster..."
             rows={4}
-            className="w-full border border-gray-300 rounded-lg p-2"
+            className={`w-full border rounded-lg p-2 ${
+              errors.description && touched.description
+                ? "border-red-500 bg-red-50 focus:border-red-500"
+                : "border-gray-300 focus:border-blue-500"
+            } focus:outline-none focus:ring-1 focus:ring-blue-500`}
           />
+          {errors.description && touched.description && (
+            <p className="text-red-500 text-sm mt-1">{errors.description}</p>
+          )}
+          <p className="text-gray-500 text-xs mt-1">
+            {formData.description ? formData.description.length : 0}/1000
+            characters
+          </p>
         </div>
       </div>
 
@@ -361,41 +608,77 @@ const DisasterReportForm = ({ formData, setFormData }) => {
         {/* Location Description */}
         <div className="mb-4">
           <label className="block text-sm font-medium mb-2">
-            Location Description
+            Location Description <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
             name="locationDescription"
             value={formData.locationDescription}
             onChange={handleChange}
+            onBlur={handleBlur}
             placeholder="e.g., Colombo 07, near Manning Market"
-            className="w-full border border-gray-300 rounded-lg p-2"
+            className={`w-full border rounded-lg p-2 ${
+              errors.locationDescription && touched.locationDescription
+                ? "border-red-500 bg-red-50 focus:border-red-500"
+                : "border-gray-300 focus:border-blue-500"
+            } focus:outline-none focus:ring-1 focus:ring-blue-500`}
           />
+          {errors.locationDescription && touched.locationDescription && (
+            <p className="text-red-500 text-sm mt-1">
+              {errors.locationDescription}
+            </p>
+          )}
         </div>
 
         {/* Latitude & Longitude */}
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div>
-            <label className="block text-sm font-medium mb-2">Latitude</label>
+            <label className="block text-sm font-medium mb-2">
+              Latitude <span className="text-red-500">*</span>
+            </label>
             <input
-              type="text"
+              type="number"
               name="latitude"
               value={formData.latitude}
               onChange={handleChange}
+              onBlur={handleBlur}
               placeholder="6.9271"
-              className="w-full border border-gray-300 rounded-lg p-2"
+              step="any"
+              min="-90"
+              max="90"
+              className={`w-full border rounded-lg p-2 ${
+                errors.latitude && touched.latitude
+                  ? "border-red-500 bg-red-50 focus:border-red-500"
+                  : "border-gray-300 focus:border-blue-500"
+              } focus:outline-none focus:ring-1 focus:ring-blue-500`}
             />
+            {errors.latitude && touched.latitude && (
+              <p className="text-red-500 text-sm mt-1">{errors.latitude}</p>
+            )}
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2">Longitude</label>
+            <label className="block text-sm font-medium mb-2">
+              Longitude <span className="text-red-500">*</span>
+            </label>
             <input
-              type="text"
+              type="number"
               name="longitude"
               value={formData.longitude}
               onChange={handleChange}
+              onBlur={handleBlur}
               placeholder="79.8612"
-              className="w-full border border-gray-300 rounded-lg p-2"
+              step="any"
+              min="-180"
+              max="180"
+              className={`w-full border rounded-lg p-2 ${
+                errors.longitude && touched.longitude
+                  ? "border-red-500 bg-red-50 focus:border-red-500"
+                  : "border-gray-300 focus:border-blue-500"
+              } focus:outline-none focus:ring-1 focus:ring-blue-500`}
             />
+            {errors.longitude && touched.longitude && (
+              <p className="text-red-500 text-sm mt-1">{errors.longitude}</p>
+            )}
           </div>
         </div>
 
@@ -430,6 +713,8 @@ const DisasterReportForm = ({ formData, setFormData }) => {
       </div>
     </div>
   );
-};
+});
+
+DisasterReportForm.displayName = "DisasterReportForm";
 
 export default DisasterReportForm;

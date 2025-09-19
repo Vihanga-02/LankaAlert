@@ -88,23 +88,56 @@ const ReportDisaster = () => {
     return `disaster_${userHash}_${timestamp}`;
   };
 
-  // Calculate estimated points for current form
+  // Calculate estimated points for current form using the combined system
   const calculateEstimatedPoints = () => {
-    let points = 50; // Base verified report points
+    // Use the same calculation as the actual reward system
+    const mockReportData = {
+      description: formData.description,
+      images: formData.images,
+      latitude: formData.latitude,
+      longitude: formData.longitude,
+      locationDescription: formData.locationDescription,
+      severity: formData.severity,
+    };
 
-    // +20 points for reports with photos
-    if (formData.images && formData.images.length > 0) {
+    // Combined points system calculation
+    let points = 50; // Base points (original system)
+
+    // Original system bonuses
+    // Bonus points for including images (original +20)
+    if (mockReportData.images && mockReportData.images.length > 0) {
       points += 20;
     }
 
-    // +30 points for critical priority (high severity)
-    if (formData.severity === "high") {
+    // Bonus points for critical priority (original +30)
+    if (mockReportData.severity === "high") {
       points += 30;
     }
 
-    // +40 points for first report (assume it might be first for estimation)
-    // Note: We can't accurately determine this without checking existing reports
-    // but we can show it as potential bonus
+    // NEW: Additional points based on description length (word count)
+    if (mockReportData.description) {
+      const wordCount = mockReportData.description
+        .trim()
+        .split(/\s+/)
+        .filter((word) => word.length > 0).length;
+
+      if (wordCount >= 50) {
+        points += 30; // Detailed description (50+ words)
+      } else if (wordCount >= 20) {
+        points += 20; // Good description (20-49 words)
+      } else if (wordCount >= 10) {
+        points += 10; // Basic description (10-19 words)
+      }
+    }
+
+    // Bonus points for providing location (additional)
+    if (
+      (mockReportData.latitude && mockReportData.longitude) ||
+      (mockReportData.locationDescription &&
+        mockReportData.locationDescription.trim().length > 0)
+    ) {
+      points += 5;
+    }
 
     return points;
   };
@@ -163,8 +196,8 @@ const ReportDisaster = () => {
       // 1️⃣ Save report in Firestore (with images uploaded to Firebase Storage)
       await addReport(reportDataToSubmit, user);
 
-      // 2️⃣ Give 50 points to reporter (+ bonus for images)
-      await givePoints(user); // givePoints internally calls fetchRewards
+      // 2️⃣ Give dynamic points to reporter based on report quality
+      await givePoints(user, reportDataToSubmit); // Pass report data for dynamic points calculation
 
       // 3️⃣ Reset form
       setFormData({
@@ -303,7 +336,7 @@ const ReportDisaster = () => {
               </h3>
               <div className="space-y-2 text-sm text-blue-800">
                 <div className="flex justify-between">
-                  <span>Verified Report:</span>
+                  <span>Base Report:</span>
                   <span className="font-semibold">50 points</span>
                 </div>
                 <div className="flex justify-between">
@@ -314,24 +347,59 @@ const ReportDisaster = () => {
                   <span>Critical Priority (High):</span>
                   <span className="font-semibold">+30 points</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>First Report:</span>
-                  <span className="font-semibold">+40 points</span>
+                <hr className="my-3 border-blue-200" />
+                <div className="text-xs text-blue-700 font-medium mb-2">
+                  DESCRIPTION BONUSES:
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>Description (10-19 words):</span>
+                  <span className="font-semibold">+10 points</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>Description (20-49 words):</span>
+                  <span className="font-semibold">+20 points</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>Description (50+ words):</span>
+                  <span className="font-semibold">+30 points</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>Location Provided:</span>
+                  <span className="font-semibold">+5 points</span>
                 </div>
                 <hr className="my-3 border-blue-200" />
                 <div className="flex justify-between font-bold text-blue-900">
                   <span>Your Estimated Points:</span>
                   <span className="text-lg">{calculateEstimatedPoints()}</span>
                 </div>
+                {formData.description &&
+                  formData.description.trim().length > 0 && (
+                    <p className="text-xs text-blue-600 mt-1">
+                      ✓ Description:{" "}
+                      {
+                        formData.description
+                          .trim()
+                          .split(/\s+/)
+                          .filter((word) => word.length > 0).length
+                      }{" "}
+                      words
+                    </p>
+                  )}
                 {formData.images?.length > 0 && (
-                  <p className="text-xs text-blue-600 mt-1">
-                    ✓ Photo bonus included
+                  <p className="text-xs text-blue-600">
+                    ✓ {formData.images.length} image
+                    {formData.images.length > 1 ? "s" : ""} included
                   </p>
                 )}
                 {formData.severity === "high" && (
                   <p className="text-xs text-blue-600">
-                    ✓ Critical priority bonus included
+                    ✓ Critical priority bonus
                   </p>
+                )}
+                {((formData.latitude && formData.longitude) ||
+                  (formData.locationDescription &&
+                    formData.locationDescription.trim().length > 0)) && (
+                  <p className="text-xs text-blue-600">✓ Location provided</p>
                 )}
               </div>
             </div>
