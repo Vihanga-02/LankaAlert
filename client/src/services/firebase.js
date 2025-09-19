@@ -1,10 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
-import {
-  getAuth,
-  setPersistence,
-  browserSessionPersistence,
-} from "firebase/auth";
+import { getAuth, setPersistence, browserSessionPersistence } from "firebase/auth";
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
@@ -25,4 +21,4 @@ const storage = getStorage(app);
 // ✅ Force logout when browser closes
 setPersistence(auth, browserSessionPersistence);
 
-export { db, auth, storage, firebaseConfig };
+export { app, db, auth, storage, firebaseConfig }; // <-- export app here
