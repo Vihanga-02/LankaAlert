@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   Users, 
   AlertTriangle, 
@@ -9,10 +9,19 @@ import {
   Activity,
   Package
 } from 'lucide-react';
-import { useEffect } from 'react';
-import TestFirestore from '../../TestFirestore';
+import { useDisasterReports } from '../../context/DisasterReportsContext';
 
 const AdminDashboard = () => {
+  const { reports, fetchReports } = useDisasterReports();
+  const [reportCount, setReportCount] = useState(0);
+
+  useEffect(() => {
+    // Fetch reports from Firestore/context
+    fetchReports().then(() => {
+      setReportCount(reports.length);
+    });
+  }, [fetchReports, reports]);
+
   const stats = [
     {
       name: 'Total Users',
@@ -39,8 +48,8 @@ const AdminDashboard = () => {
       color: 'bg-orange-500'
     },
     {
-      name: 'Reporters',
-      value: '142',
+      name: 'Reports',
+      value: reportCount, // dynamic report count
       change: '+8%',
       changeType: 'increase',
       icon: Activity,
@@ -102,9 +111,7 @@ const AdminDashboard = () => {
     }
   ];
 
-
   return (
-    
     <div className="p-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-8">

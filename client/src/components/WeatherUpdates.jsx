@@ -1,7 +1,35 @@
 import React from "react";
 import { AlertTriangle, Calendar, MapPin } from "lucide-react";
 
-const WeatherUpdates = ({ alerts }) => {
+const WeatherUpdates = () => {
+  // ✅ Dummy weather alerts moved here
+  const alerts = [
+    {
+      id: 1,
+      type: "Heavy Rainfall",
+      severity: "high",
+      location: "Colombo",
+      district: "Colombo",
+      description: "Expect heavy rainfall with possible flooding.",
+      date: "2025-08-31",
+      time: "10:30 AM",
+      status: "active",
+      validUntil: "2025-09-01",
+    },
+    {
+      id: 2,
+      type: "Strong Winds",
+      severity: "medium",
+      location: "Gampaha",
+      district: "Gampaha",
+      description: "Strong wind speeds expected in coastal areas.",
+      date: "2025-08-31",
+      time: "01:00 PM",
+      status: "active",
+      validUntil: "2025-09-01",
+    },
+  ];
+
   const getSeverityColor = (severity) => {
     switch (severity.toLowerCase()) {
       case "critical":
@@ -32,8 +60,12 @@ const WeatherUpdates = ({ alerts }) => {
     return (
       <div className="text-center py-12">
         <AlertTriangle className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-xl font-semibold text-gray-600 mb-2">No Alerts Found</h3>
-        <p className="text-gray-500">Try adjusting your filters to see more results.</p>
+        <h3 className="text-xl font-semibold text-gray-600 mb-2">
+          No Alerts Found
+        </h3>
+        <p className="text-gray-500">
+          Try adjusting your filters to see more results.
+        </p>
       </div>
     );
   }
@@ -51,7 +83,9 @@ const WeatherUpdates = ({ alerts }) => {
                 <AlertTriangle className="h-6 w-6 text-blue-600" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-gray-900 mb-1">{alert.type}</h3>
+                <h3 className="text-xl font-bold text-gray-900 mb-1">
+                  {alert.type}
+                </h3>
                 <div className="flex items-center space-x-4 text-sm text-gray-600">
                   <div className="flex items-center space-x-1">
                     <MapPin className="h-4 w-4" />
