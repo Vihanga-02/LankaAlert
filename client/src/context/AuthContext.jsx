@@ -1,17 +1,12 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect } from "react";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   onAuthStateChanged,
   signOut,
-} from 'firebase/auth';
-import {
-  doc,
-  setDoc,
-  getDoc,
-  serverTimestamp,
-} from 'firebase/firestore';
-import { auth, db } from '../services/firebase';
+} from "firebase/auth";
+import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
+import { auth, db } from "../services/firebase";
 
 const AuthContext = createContext();
 export const useAuth = () => useContext(AuthContext);
@@ -23,7 +18,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+        const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
         setUser(userDoc.exists() ? userDoc.data() : null);
       } else {
         setUser(null);
@@ -33,49 +28,42 @@ export const AuthProvider = ({ children }) => {
     return () => unsubscribe();
   }, []);
 
-  const register = async ({
-      name,
-      email,
-      password,
-      phone,
-      district,
-      city,
-      reporterOfficeLocation,
-      reporterOfficeId,
-      applyAsReporter,
-    }) => {
-
+  const register = async (formData) => {
     setIsLoading(true);
     try {
-      const cred = await createUserWithEmailAndPassword(auth, email, password);
+      const { password, reporterOfficeLocation, reporterOfficeId, ...rest } =
+        formData;
 
+      const cred = await createUserWithEmailAndPassword(
+        auth,
+        formData.email,
+        password
+      );
+
+      // Build base user object
       const newUser = {
+        ...rest, // includes smsSubscribed, farmerAlerts, fishermenAlerts, etc.
         uid: cred.user.uid,
-        name,
-        email,
-        phone,
-        district,
-        city,
-        role: 'user',
-        isAdmin: email === 'admin@lankaalert.com',
+        role: "user",
+        isAdmin: formData.email === "admin@lankaalert.com",
         isReporter: false,
         createdAt: serverTimestamp(),
       };
 
-      // Only include reporter fields if applied
-     if (applyAsReporter) {
-       newUser.requestedReporter = true;
-        if (reporterOfficeLocation) newUser.districtOffice = reporterOfficeLocation;
+      // If they applied as reporter, add extra fields
+      if (formData.applyAsReporter) {
+        newUser.requestedReporter = true;
+        if (reporterOfficeLocation)
+          newUser.districtOffice = reporterOfficeLocation;
         if (reporterOfficeId) newUser.workId = reporterOfficeId;
-        }
+      }
 
-
-      await setDoc(doc(db, 'users', cred.user.uid), newUser);
+      await setDoc(doc(db, "users", cred.user.uid), newUser);
 
       setUser(newUser);
       return { success: true };
     } catch (error) {
-      console.error('Registration Error:', error.message);
+      console.error("Registration Error:", error.message);
       return { success: false, error: error.message };
     } finally {
       setIsLoading(false);
@@ -86,13 +74,13 @@ export const AuthProvider = ({ children }) => {
     setIsLoading(true);
     try {
       const cred = await signInWithEmailAndPassword(auth, email, password);
-      const userDoc = await getDoc(doc(db, 'users', cred.user.uid));
-      if (!userDoc.exists()) throw new Error('User not found');
+      const userDoc = await getDoc(doc(db, "users", cred.user.uid));
+      if (!userDoc.exists()) throw new Error("User not found");
       const userData = userDoc.data();
       setUser(userData);
       return { success: true };
     } catch (error) {
-      console.error('Login Error:', error.message);
+      console.error("Login Error:", error.message);
       return { success: false, error: error.message };
     } finally {
       setIsLoading(false);

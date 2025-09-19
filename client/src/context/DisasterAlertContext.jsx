@@ -5,8 +5,28 @@ import {
   updateDisasterAlert,
   deleteDisasterAlert,
 } from "../services/disasterAlertService";
+import { Timestamp } from "firebase/firestore";
 
 const DisasterAlertContext = createContext();
+
+// 🔥 Utility to normalize Firestore data
+const normalizeAlert = (alert) => {
+  const data = { ...alert };
+
+  // Normalize validUntil (timestamp → date + time)
+  if (data.validUntil instanceof Timestamp) {
+    const d = data.validUntil.toDate();
+    data.validUntilDate = d.toISOString().split("T")[0]; // yyyy-mm-dd
+    data.validUntilTime = d.toTimeString().slice(0, 5); // HH:mm
+  }
+
+  // Normalize createdAt (timestamp)
+  if (data.createdAt instanceof Timestamp) {
+    data.createdAt = data.createdAt.toDate();
+  }
+
+  return data;
+};
 
 export const DisasterAlertProvider = ({ children }) => {
   const [alerts, setAlerts] = useState([]);
@@ -16,7 +36,8 @@ export const DisasterAlertProvider = ({ children }) => {
     setLoading(true);
     try {
       const data = await getDisasterAlerts();
-      setAlerts(data);
+      const normalized = data.map((a) => normalizeAlert(a));
+      setAlerts(normalized);
     } catch (err) {
       console.error("Failed to fetch alerts:", err);
     }
@@ -25,8 +46,22 @@ export const DisasterAlertProvider = ({ children }) => {
 
   const createAlert = async (alertData) => {
     try {
-      const id = await addDisasterAlert(alertData);
-      setAlerts((prev) => [{ id, ...alertData }, ...prev]);
+      // Convert validUntilDate + validUntilTime → Timestamp
+      let validUntil = null;
+      if (alertData.validUntilDate && alertData.validUntilTime) {
+        validUntil = Timestamp.fromDate(
+          new Date(`${alertData.validUntilDate}T${alertData.validUntilTime}:00`)
+        );
+      }
+
+      const newAlert = {
+        ...alertData,
+        createdAt: Timestamp.now(),
+        validUntil,
+      };
+
+      const id = await addDisasterAlert(newAlert);
+      setAlerts((prev) => [{ id, ...normalizeAlert(newAlert) }, ...prev]);
       return id;
     } catch (err) {
       console.error("Failed to create alert:", err);
@@ -36,9 +71,23 @@ export const DisasterAlertProvider = ({ children }) => {
 
   const editAlert = async (id, alertData) => {
     try {
-      await updateDisasterAlert(id, alertData);
+      let validUntil = null;
+      if (alertData.validUntilDate && alertData.validUntilTime) {
+        validUntil = Timestamp.fromDate(
+          new Date(`${alertData.validUntilDate}T${alertData.validUntilTime}:00`)
+        );
+      }
+
+      const updated = {
+        ...alertData,
+        validUntil,
+      };
+
+      await updateDisasterAlert(id, updated);
       setAlerts((prev) =>
-        prev.map((a) => (a.id === id ? { ...a, ...alertData } : a))
+        prev.map((a) =>
+          a.id === id ? { ...a, ...normalizeAlert(updated) } : a
+        )
       );
     } catch (err) {
       console.error("Failed to update alert:", err);
