@@ -1,474 +1,184 @@
-import React, { useState } from 'react';
-import { 
-  HelpCircle, 
-  User, 
-  MapPin, 
-  Clock, 
-  Package, 
-  Users, 
-  CheckCircle, 
-  XCircle,
-  Search,
-  Filter,
+// src/pages/admin/EmergencyRequests.jsx
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Users,
+  Phone,
+  MapPin,
   AlertTriangle,
-  Phone
-} from 'lucide-react';
+  Package,
+  Pencil,
+  Trash2,
+  Clock,
+} from "lucide-react";
+import { useEmergency } from "../../context/EmergencyContext";
+
+const statusColors = {
+  Pending: "bg-orange-100 text-orange-800",
+  Processing: "bg-blue-100 text-blue-800",
+  Complete: "bg-green-100 text-green-800",
+};
 
 const EmergencyRequests = () => {
-  const [activeTab, setActiveTab] = useState('pending');
-  const [searchTerm, setSearchTerm] = useState('');
+  const { allRequests, isLoading, handleUpdateRequest, handleDeleteRequest } =
+    useEmergency();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
 
-  const pendingRequests = [
-    {
-      id: 1,
-      user: {
-        name: 'Kamal Perera',
-        phone: '+94123456789',
-        location: 'Ratnapura, Sabaragamuwa'
-      },
-      requestType: 'Medical Supplies',
-      urgency: 'High',
-      description: 'Diabetic patient needs insulin urgently. Local pharmacy closed due to flooding.',
-      items: ['Insulin', 'Syringes', 'Blood glucose test strips'],
-      peopleAffected: 1,
-      submittedAt: '2024-01-26 08:30 AM',
-      disaster: 'Flood',
-      coordinates: { lat: 6.6829, lng: 80.4098 }
-    },
-    {
-      id: 2,
-      user: {
-        name: 'Nimal Silva',
-        phone: '+94123456790',
-        location: 'Gampaha, Western'
-      },
-      requestType: 'Food & Water',
-      urgency: 'Medium',
-      description: 'Family of 5 trapped in house due to flooding. Need food and clean water.',
-      items: ['Rice packets', 'Water bottles', 'Canned food'],
-      peopleAffected: 5,
-      submittedAt: '2024-01-26 07:15 AM',
-      disaster: 'Flood',
-      coordinates: { lat: 7.0873, lng: 80.0514 }
-    },
-    {
-      id: 3,
-      user: {
-        name: 'Saman Fernando',
-        phone: '+94123456791',
-        location: 'Matara, Southern'
-      },
-      requestType: 'Shelter',
-      urgency: 'High',
-      description: 'House damaged by strong winds. Family needs temporary shelter.',
-      items: ['Temporary shelter', 'Blankets', 'Mattresses'],
-      peopleAffected: 4,
-      submittedAt: '2024-01-26 06:45 AM',
-      disaster: 'Strong Wind',
-      coordinates: { lat: 5.9549, lng: 80.5550 }
-    }
-  ];
+  useEffect(() => {
+    if (!isLoading) setLoading(false);
+  }, [isLoading]);
 
-  const processingRequests = [
-    {
-      id: 4,
-      user: {
-        name: 'Priya Jayawardena',
-        phone: '+94123456792',
-        location: 'Kandy, Central'
-      },
-      requestType: 'Medical Supplies',
-      urgency: 'Medium',
-      description: 'Elder person needs medications for blood pressure.',
-      items: ['Blood pressure medication', 'Medical consultation'],
-      peopleAffected: 1,
-      submittedAt: '2024-01-25 15:30 PM',
-      assignedTo: 'Sunil Fernando (Kandy Reporter)',
-      assignedAt: '2024-01-25 16:00 PM',
-      estimatedDelivery: '2024-01-26 10:00 AM',
-      disaster: 'Landslide'
-    }
-  ];
+  if (loading) {
+    return <div className="p-6 text-center text-gray-500">Loading requests...</div>;
+  }
 
-  const completedRequests = [
-    {
-      id: 5,
-      user: {
-        name: 'Ruwan Perera',
-        phone: '+94123456793',
-        location: 'Colombo, Western'
-      },
-      requestType: 'Food & Water',
-      urgency: 'Medium',
-      description: 'Family needed emergency food supplies.',
-      items: ['Rice packets', 'Water bottles', 'Milk powder'],
-      peopleAffected: 3,
-      submittedAt: '2024-01-25 12:00 PM',
-      assignedTo: 'Kamal Perera (Colombo Reporter)',
-      completedAt: '2024-01-25 18:30 PM',
-      disaster: 'Flood'
-    }
-  ];
+  if (!allRequests || allRequests.length === 0) {
+    return <div className="p-6 text-center text-gray-500">No emergency requests found.</div>;
+  }
 
-  const availableReporters = [
-    {
-      id: 1,
-      name: 'Sunil Fernando',
-      district: 'Kandy',
-      points: 245,
-      activeAssignments: 2,
-      distance: '2.5 km'
-    },
-    {
-      id: 2,
-      name: 'Kamal Perera',
-      district: 'Colombo',
-      points: 180,
-      activeAssignments: 1,
-      distance: '1.8 km'
-    },
-    {
-      id: 3,
-      name: 'Priya Silva',
-      district: 'Gampaha',
-      points: 156,
-      activeAssignments: 0,
-      distance: '5.2 km'
-    }
-  ];
+  // ✅ Sort requests by date (latest first)
+  const sortedRequests = [...allRequests].sort((a, b) => {
+    const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt);
+    const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
+    return dateB - dateA; // latest first
+  });
 
-  const tabs = [
-    { id: 'pending', name: 'Pending', count: pendingRequests.length },
-    { id: 'processing', name: 'Processing', count: processingRequests.length },
-    { id: 'completed', name: 'Completed', count: completedRequests.length }
-  ];
-
-  const getUrgencyColor = (urgency) => {
-    switch (urgency) {
-      case 'High': return 'bg-red-100 text-red-800';
-      case 'Medium': return 'bg-orange-100 text-orange-800';
-      case 'Low': return 'bg-yellow-100 text-yellow-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
+  // ✅ Always navigate to approve-request page
+  const handleApproveSupply = (req) => {
+    navigate(`/admin/approve-request/${req.id}`, { state: { request: req } });
   };
 
-  const handleAssignRequest = (requestId, reporterId) => {
-    console.log('Assign request', requestId, 'to reporter', reporterId);
-  };
+  const handleStatusUpdate = (req) => {
+    const newStatus =
+      req.status === "Pending"
+        ? "Processing"
+        : req.status === "Processing"
+        ? "Complete"
+        : "Complete";
 
-  const handleCompleteRequest = (requestId) => {
-    console.log('Complete request', requestId);
+    handleUpdateRequest(req.id, { status: newStatus });
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Emergency Requests</h1>
-        <p className="mt-2 text-gray-600">Manage and fulfill emergency requests from affected citizens</p>
-      </div>
+    <div className="p-6 font-[Inter] bg-gray-50 min-h-screen">
+      <h1 className="text-2xl font-bold mb-6">Emergency Requests</h1>
+      <ul className="space-y-4">
+        {sortedRequests.map((req) => {
+          const statusClass = statusColors[req.status || "Pending"];
+          const isActionable = req.status !== "Complete";
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-          <div className="flex items-center">
-            <div className="p-2 bg-red-100 rounded-lg">
-              <HelpCircle className="h-6 w-6 text-red-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Pending Requests</p>
-              <p className="text-2xl font-semibold text-gray-900">{pendingRequests.length}</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-          <div className="flex items-center">
-            <div className="p-2 bg-orange-100 rounded-lg">
-              <Clock className="h-6 w-6 text-orange-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Processing</p>
-              <p className="text-2xl font-semibold text-gray-900">{processingRequests.length}</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-          <div className="flex items-center">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <CheckCircle className="h-6 w-6 text-green-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Completed Today</p>
-              <p className="text-2xl font-semibold text-gray-900">{completedRequests.length}</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-          <div className="flex items-center">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Users className="h-6 w-6 text-blue-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">People Helped</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                {pendingRequests.reduce((sum, req) => sum + req.peopleAffected, 0) + 
-                 processingRequests.reduce((sum, req) => sum + req.peopleAffected, 0) + 
-                 completedRequests.reduce((sum, req) => sum + req.peopleAffected, 0)}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+          // ✅ format createdAt safely
+          let formattedDate = "N/A";
+          if (req.createdAt) {
+            if (req.createdAt.toDate) {
+              formattedDate = req.createdAt.toDate().toLocaleString();
+            } else {
+              const parsed = new Date(req.createdAt);
+              formattedDate = isNaN(parsed) ? "N/A" : parsed.toLocaleString();
+            }
+          }
 
-      {/* Tabs */}
-      <div className="border-b border-gray-200 mb-6">
-        <nav className="-mb-px flex space-x-8 overflow-x-auto">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === tab.id
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+          return (
+            <li
+              key={req.id}
+              className="p-6 bg-white shadow-md rounded-lg border border-gray-200"
             >
-              {tab.name}
-              <span className="ml-2 bg-gray-100 text-gray-600 py-0.5 px-2.5 rounded-full text-xs">
-                {tab.count}
-              </span>
-            </button>
-          ))}
-        </nav>
-      </div>
-
-      {/* Search and Filter */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search requests..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-        </div>
-        <button className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-          <Filter className="h-5 w-5 mr-2 text-gray-400" />
-          Filter
-        </button>
-      </div>
-
-      {/* Content based on active tab */}
-      <div className="space-y-6">
-        {/* Pending Requests */}
-        {activeTab === 'pending' && (
-          <>
-            {pendingRequests.map((request) => (
-              <div key={request.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center space-x-3">
-                    <AlertTriangle className={`h-6 w-6 ${
-                      request.urgency === 'High' ? 'text-red-500' : 'text-orange-500'
-                    }`} />
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">{request.requestType}</h3>
-                      <p className="text-gray-600">{request.user.name}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getUrgencyColor(request.urgency)}`}>
-                      {request.urgency} Priority
-                    </span>
-                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                      {request.disaster}
-                    </span>
+              {/* Header */}
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center space-x-3">
+                  <AlertTriangle className="h-6 w-6 text-red-500" />
+                  <div>
+                    <h3 className="text-2xl font-bold text-gray-900">
+                      {req.emergencyType || "N/A"}
+                    </h3>
+                    <p className="text-lg font-semibold text-gray-800">
+                      {req.name || req.user?.name || "N/A"}
+                    </p>
+                    <p className="text-sm text-gray-500 mt-1 flex items-center space-x-2">
+                      <Clock className="h-4 w-4 text-gray-400" />
+                      <span>Requested on: {formattedDate}</span>
+                    </p>
                   </div>
                 </div>
+                <span
+                  className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-bold ${statusClass}`}
+                >
+                  {req.status || "Pending"}
+                </span>
+              </div>
 
-                <p className="text-gray-700 mb-4">{request.description}</p>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                  <div className="flex items-center space-x-2 text-sm text-gray-600">
-                    <User className="h-4 w-4" />
-                    <span>{request.user.name}</span>
-                  </div>
-                  <div className="flex items-center space-x-2 text-sm text-gray-600">
-                    <Phone className="h-4 w-4" />
-                    <span>{request.user.phone}</span>
-                  </div>
-                  <div className="flex items-center space-x-2 text-sm text-gray-600">
-                    <MapPin className="h-4 w-4" />
-                    <span>{request.user.location}</span>
-                  </div>
+              {/* Details */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-base text-gray-600 mb-4">
+                <div className="flex items-center space-x-2">
+                  <MapPin className="h-4 w-4 text-blue-500" />
+                  <span>{req.location || req.user?.location || "N/A"}</span>
                 </div>
-
-                <div className="mb-4">
-                  <p className="text-sm font-medium text-gray-700 mb-2">Requested Items:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {request.items.map((item, index) => (
-                      <span key={index} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        {item}
-                      </span>
-                    ))}
-                  </div>
+                <div className="flex items-center space-x-2">
+                  <Users className="h-4 w-4 text-orange-500" />
+                  <span>{req.urgency || "N/A"}</span>
                 </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4 text-sm text-gray-500">
-                    <span>People affected: {request.peopleAffected}</span>
-                    <span>•</span>
-                    <span>Submitted: {request.submittedAt}</span>
-                  </div>
-                  <div className="flex space-x-3">
-                    <button className="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                      <Package className="h-4 w-4 mr-2" />
-                      Assign to Reporter
-                    </button>
-                    <button className="inline-flex items-center px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-                      <MapPin className="h-4 w-4 mr-2" />
-                      View Location
-                    </button>
-                  </div>
+                <div className="flex items-center space-x-2">
+                  <Phone className="h-4 w-4 text-green-500" />
+                  <span>{req.phone || req.user?.phone || "N/A"}</span>
                 </div>
               </div>
-            ))}
-          </>
-        )}
 
-        {/* Processing Requests */}
-        {activeTab === 'processing' && (
-          <>
-            {processingRequests.map((request) => (
-              <div key={request.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center space-x-3">
-                    <Clock className="h-6 w-6 text-orange-500" />
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">{request.requestType}</h3>
-                      <p className="text-gray-600">{request.user.name}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getUrgencyColor(request.urgency)}`}>
-                      {request.urgency} Priority
-                    </span>
-                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">
-                      Processing
-                    </span>
-                  </div>
-                </div>
+              <p className="text-base text-gray-700 mb-2">
+                <b>Needs Help:</b> {req.needsHelp?.join(", ") || "N/A"}
+              </p>
 
-                <p className="text-gray-700 mb-4">{request.description}</p>
+              {req.needsHelp?.includes("food") &&
+                req.foodItems &&
+                req.foodItems.length > 0 && (
+                  <div className="text-base text-gray-700 mb-2">
+                    <b>Food & Water Items:</b>
+                    <ul className="list-disc list-inside mt-1">
+                      {req.foodItems.map((item, idx) => (
+                        <li key={idx}>
+                          {item.name} - Quantity: {item.quantity}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
-                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <Users className="h-5 w-5 text-orange-600" />
-                    <span className="font-medium text-orange-800">Assigned to: {request.assignedTo}</span>
-                  </div>
-                  <div className="text-sm text-orange-700">
-                    <p>Assigned: {request.assignedAt}</p>
-                    <p>Estimated delivery: {request.estimatedDelivery}</p>
-                  </div>
-                </div>
+              <p className="text-base text-gray-700 mb-4">
+                {req.description || "N/A"}
+              </p>
 
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-gray-500">
-                    People affected: {request.peopleAffected}
-                  </div>
-                  <div className="flex space-x-3">
-                    <button
-                      onClick={() => handleCompleteRequest(request.id)}
-                      className="inline-flex items-center px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                    >
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Mark Complete
-                    </button>
-                    <button className="inline-flex items-center px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-                      <Phone className="h-4 w-4 mr-2" />
-                      Contact Reporter
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </>
-        )}
-
-        {/* Completed Requests */}
-        {activeTab === 'completed' && (
-          <>
-            {completedRequests.map((request) => (
-              <div key={request.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center space-x-3">
-                    <CheckCircle className="h-6 w-6 text-green-500" />
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">{request.requestType}</h3>
-                      <p className="text-gray-600">{request.user.name}</p>
-                    </div>
-                  </div>
-                  <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                    Completed
-                  </span>
-                </div>
-
-                <p className="text-gray-700 mb-4">{request.description}</p>
-
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <CheckCircle className="h-5 w-5 text-green-600" />
-                    <span className="font-medium text-green-800">Completed by: {request.assignedTo}</span>
-                  </div>
-                  <div className="text-sm text-green-700">
-                    <p>Completed: {request.completedAt}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-gray-500">
-                    People helped: {request.peopleAffected}
-                  </div>
-                  <button className="inline-flex items-center px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-                    View Details
-                  </button>
-                </div>
-              </div>
-            ))}
-          </>
-        )}
-      </div>
-
-      {/* Available Reporters Sidebar - shown when assigning */}
-      <div className="fixed inset-0 z-50 hidden" id="assign-modal">
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-75"></div>
-        <div className="fixed inset-y-0 right-0 w-96 bg-white shadow-xl">
-          <div className="p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Available Reporters</h3>
-            <div className="space-y-4">
-              {availableReporters.map((reporter) => (
-                <div key={reporter.id} className="border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-medium text-gray-900">{reporter.name}</h4>
-                    <span className="text-sm text-gray-500">{reporter.distance}</span>
-                  </div>
-                  <div className="text-sm text-gray-600 mb-3">
-                    <p>{reporter.district} District</p>
-                    <p>{reporter.points} points • {reporter.activeAssignments} active assignments</p>
-                  </div>
+              {/* Actions */}
+              <div className="flex justify-end space-x-3 mt-4">
+                {isActionable && (
                   <button
-                    onClick={() => handleAssignRequest(1, reporter.id)}
-                    className="w-full px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    onClick={() => handleApproveSupply(req)}
+                    className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-500 transition-colors"
                   >
-                    Assign
+                    <Package className="h-4 w-4 mr-2" />
+                    Approve Supply
                   </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
+                )}
+                {isActionable && (
+                  <button
+                    onClick={() => handleStatusUpdate(req)}
+                    className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors"
+                  >
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Update Status
+                  </button>
+                )}
+                <button
+                  onClick={() => handleDeleteRequest(req.id)}
+                  className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </button>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 };
