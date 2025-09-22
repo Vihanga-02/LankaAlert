@@ -38,6 +38,9 @@ import WeatherAlertManagement from "./pages/admin/WeatherAlertManagement";
 import InventoryAddItem from "./pages/admin/InventoryAddItem";
 import ApproveRequest from "./pages/admin/ApproveRequest";
 
+//weather pages
+import WeatherSearch from "./components/WeatherSearch";
+
 // ─────────────────────────────
 // Route Guards
 // ─────────────────────────────
@@ -129,6 +132,10 @@ function App() {
                           <Route
                             path="/report-disaster"
                             element={<PrivateRoute><ReportDisaster /></PrivateRoute>}
+                          />
+                          <Route
+                           path="/weather-search"
+                            element={<UserLayout><WeatherSearch /></UserLayout>} // Add the WeatherSearch component here
                           />
                         </Route>
 
