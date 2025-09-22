@@ -140,7 +140,8 @@ const LiveTracking = () => {
                   Interactive Disaster Map
                 </h3>
               </div>
-              <div className="relative h-120">
+              <div className="relative h-[500px]">
+
                 <MapLiveTrack zones={filteredZones} userLocation={userLocation} />
               </div>
             </div>
