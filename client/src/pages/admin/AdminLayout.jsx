@@ -29,6 +29,7 @@ const AdminLayout = () => {
     { name: "Map Update", href: "/admin/map", icon: Map },
     { name: "Emergency Requests", href: "/admin/emergency", icon: HelpCircle },
     { name: "Inventory Management", href: "/admin/inventory", icon: Package },
+    { name: 'Manage Notifications', href: '/admin/notifications', icon: Bell },
   ];
 
   const handleLogout = () => {

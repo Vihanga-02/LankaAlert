@@ -9,8 +9,11 @@ import { Route } from "lucide-react";
 import RouteForm from "../components/RouteForm";
 import { useMapZone } from "../context/MapZoneContext";
 import { analyzeRouteRisk, compareRoutesByRisk } from "../utils/routeAnalysis";
+import { collection, onSnapshot } from "firebase/firestore";
+import { db } from "../services/firebase";
+import TravelRiskReport from "../components/TravelRiskReport";
 
-const mapContainerStyle = { width: "100%", height: "100vh" };
+const mapContainerStyle = { width: "100%", height: "100vh" }; 
 const defaultCenter = { lat: 7.8731, lng: 80.7718 };
 const libraries = ["places"];
 
@@ -40,6 +43,8 @@ export default function RiskRoute() {
   const [selectedRouteIndex, setSelectedRouteIndex] = useState(0);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [userLocation, setUserLocation] = useState(null);
+  const [routeNotifications, setRouteNotifications] = useState([]);
+  const [notifications, setNotifications] = useState([]); // Added missing state
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -54,6 +59,13 @@ export default function RiskRoute() {
     }
   }, []);
 
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, "notifications"), (snapshot) => {
+      setNotifications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+    return () => unsub();
+  }, []);
+
   const onLoad = useCallback((map) => {
     setMap(map);
     setDirectionsService(new window.google.maps.DirectionsService());
@@ -65,6 +77,7 @@ export default function RiskRoute() {
     setDirectionsResponse(null);
     setAlternateRoutes([]);
     setRouteRisks([]);
+    setRouteNotifications([]); // Clear previous notifications
 
     try {
       const request = {
@@ -88,6 +101,7 @@ export default function RiskRoute() {
                 radius: 2000,
                 type: z.subCategory,
                 name: z.name,
+                id: z.id,
               }))
           )
         );
@@ -100,6 +114,15 @@ export default function RiskRoute() {
         setRouteRisks(sorted.map((s) => s.risk));
         setDirectionsResponse({ ...result, routes: [sorted[0].route] });
         setSelectedRouteIndex(0);
+
+        // ✅ Find notifications linked to affected zones
+        const matchedNotifs = sorted[0].risk.affectedZones
+          .map((zone) =>
+            notifications.find((n) => n.zoneId === zone.id && n.status === "active")
+          )
+          .filter(Boolean);
+
+        setRouteNotifications(matchedNotifs);
       }
     } catch (err) {
       console.error("Route calculation failed:", err);
@@ -116,6 +139,15 @@ export default function RiskRoute() {
         ...directionsResponse,
         routes: [alternateRoutes[index]],
       });
+      
+      // Update notifications when selecting a different route
+      const matchedNotifs = routeRisks[index].affectedZones
+        .map((zone) =>
+          notifications.find((n) => n.zoneId === zone.id && n.status === "active")
+        )
+        .filter(Boolean);
+      
+      setRouteNotifications(matchedNotifs);
     }
   };
 
@@ -172,13 +204,24 @@ export default function RiskRoute() {
           />
         )}
 
-        {zones.map((zone) => (
-          <Marker
-            key={zone.id}
-            position={{ lat: zone.latitude, lng: zone.longitude }}
-            icon={getMarkerIcon(zone.category, zone.subCategory)}
-          />
-        ))}
+        {zones.map((zone) => {
+          const notif = notifications.find(
+            (n) => n.zoneId === zone.id && n.status === "active"
+          );
+
+          return (
+            <Marker
+              key={zone.id}
+              position={{ lat: zone.latitude, lng: zone.longitude }}
+              icon={getMarkerIcon(zone.category, zone.subCategory)}
+              onClick={() => {
+                if (notif) {
+                  alert(`${notif.title}: ${notif.message}`);
+                }
+              }}
+            />
+          );
+        })}
 
         {directionsResponse && (
           <DirectionsRenderer
@@ -253,6 +296,42 @@ export default function RiskRoute() {
           </div>
         </div>
       )}
+
+      {/* Notifications Panel */}
+      {routeNotifications.length > 0 && (
+  <div className="absolute bottom-20 right-6 z-20 bg-white shadow-lg rounded-xl p-4 w-[90%] max-w-md border border-gray-200">
+    <h3 className="font-semibold text-lg mb-2 flex items-center">
+      <Route className="mr-2 h-5 w-5" /> Route Alerts
+    </h3>
+    <div className="space-y-2 max-h-48 overflow-y-auto">
+      {routeNotifications.map((notif) => (
+        <div
+          key={notif.id}
+          className="p-3 bg-red-50 border border-red-300 rounded-lg"
+        >
+          <p className="font-medium text-red-700">{notif.title}</p>
+          <p className="text-sm text-gray-700">{notif.message}</p>
+          {notif.timestamp && (
+            <p className="text-xs text-gray-500 mt-1">
+              {new Date(notif.timestamp.toDate()).toLocaleString()}
+            </p>
+          )}
+        </div>
+      ))}
+    </div>
+    
+    {/* Add the Travel Risk Report component here */}
+    <TravelRiskReport
+      timestamp={new Date().toLocaleString()}
+      userLocation={userLocation}
+      routes={alternateRoutes}
+      selectedRouteIndex={selectedRouteIndex}
+      routeRisks={routeRisks}
+      notifications={routeNotifications}
+      affectedZones={routeRisks[selectedRouteIndex]?.affectedZones || []}
+    />
+  </div>
+)}
     </div>
   );
 }

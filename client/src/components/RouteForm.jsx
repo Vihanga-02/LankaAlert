@@ -19,6 +19,11 @@ export default function RouteForm({ onCalculateRoute, isAnalyzing, userLocation 
     }
   }, []);
 
+  // Function to sanitize input to only allow letters, numbers, and spaces
+  const sanitizeInput = (input) => {
+    return input.replace(/[^a-zA-Z0-9\s]/g, '');
+  };
+
   const fetchSuggestions = (input, setSuggestions) => {
     if (!autocompleteService.current || input.length < 3) {
       setSuggestions([]);
@@ -43,13 +48,13 @@ export default function RouteForm({ onCalculateRoute, isAnalyzing, userLocation 
   };
 
   const handleOriginChange = (e) => {
-    const value = e.target.value;
+    const value = sanitizeInput(e.target.value);
     setOrigin(value);
     fetchSuggestions(value, setOriginSuggestions);
   };
 
   const handleDestinationChange = (e) => {
-    const value = e.target.value;
+    const value = sanitizeInput(e.target.value);
     setDestination(value);
     fetchSuggestions(value, setDestinationSuggestions);
   };
@@ -113,6 +118,8 @@ export default function RouteForm({ onCalculateRoute, isAnalyzing, userLocation 
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="Enter starting location"
               disabled={useCurrentLocation}
+              pattern="[a-zA-Z0-9\s]*"
+              title="Only letters, numbers, and spaces are allowed"
             />
             {originSuggestions.length > 0 && (
               <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-auto">
@@ -162,6 +169,8 @@ export default function RouteForm({ onCalculateRoute, isAnalyzing, userLocation 
               onChange={handleDestinationChange}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="Enter destination"
+              pattern="[a-zA-Z0-9\s]*"
+              title="Only letters, numbers, and spaces are allowed"
             />
             {destinationSuggestions.length > 0 && (
               <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-auto">

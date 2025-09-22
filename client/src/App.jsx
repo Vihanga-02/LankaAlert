@@ -37,6 +37,7 @@ import InventoryManagement from "./pages/admin/InventoryManagement";
 import WeatherAlertManagement from "./pages/admin/WeatherAlertManagement";
 import InventoryAddItem from "./pages/admin/InventoryAddItem";
 import ApproveRequest from "./pages/admin/ApproveRequest";
+import NotificationManager from "./pages/admin/NotificationManager";
 
 // ─────────────────────────────
 // Route Guards
@@ -112,6 +113,7 @@ function App() {
                           <Route path="approve-request/:id" element={<ApproveRequest />} />
                           <Route path="inventory" element={<InventoryManagement />} />
                           <Route path="inventory/add" element={<InventoryAddItem />} />
+                          <Route path="notifications" element={<NotificationManager />} />
                         </Route>
 
                         {/* User/Public Routes */}

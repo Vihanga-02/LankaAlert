@@ -20,10 +20,10 @@ const dangerIcons = {
 
 const safeIcon = { url: "/safezone.png", w: 40, h: 40 };
 
-function MapLiveTrack({ zones = [], onSelectSafeZone }) {
+function MapLiveTrack({ zones = [], userLocation = null, onSelectSafeZone }) {
   const [selectedZone, setSelectedZone] = useState(null);
 
-  const center = { lat: 7.8731, lng: 80.7718 }; // Sri Lanka center
+  const center = userLocation || { lat: 7.8731, lng: 80.7718 }; // Use user location or Sri Lanka center
 
   const getMarkerIcon = (category, subCategory) => {
     const key = (subCategory || "").toLowerCase();
@@ -40,7 +40,29 @@ function MapLiveTrack({ zones = [], onSelectSafeZone }) {
   };
 
   return (
-    <GoogleMap mapContainerStyle={containerStyle} center={center} zoom={7}>
+    <GoogleMap 
+      mapContainerStyle={containerStyle} 
+      center={center} 
+      zoom={userLocation ? 12 : 7}
+    >
+      {/* User location marker */}
+      {userLocation && (
+        <Marker
+          position={{ lat: userLocation.lat, lng: userLocation.lng }}
+          icon={{
+            url: "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(`
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#2563eb" width="40px" height="40px">
+                <path d="M0 0h24v24H0z" fill="none"/>
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+              </svg>
+            `),
+            scaledSize: new window.google.maps.Size(30, 30),
+            anchor: new window.google.maps.Point(15, 15),
+          }}
+        />
+      )}
+      
+      {/* Zone markers */}
       {zones.map((zone) => (
         <Marker
           key={zone.id}
@@ -65,7 +87,7 @@ function MapLiveTrack({ zones = [], onSelectSafeZone }) {
             {selectedZone.category === "danger" ? (
               <p className="text-red-600 flex items-center">
                 <AlertTriangle className="h-4 w-4 mr-1" />
-                Danger: {selectedZone.subCategory}
+                Danger: ${selectedZone.subCategory}
               </p>
             ) : (
               <p className="text-green-600 flex items-center">
