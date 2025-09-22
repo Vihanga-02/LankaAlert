@@ -1,12 +1,18 @@
 // components/ReporterMapMarking.jsx
 import React, { useEffect, useRef, useState } from "react";
 
-const ReporterMapMarking = ({ disasterType, latitude, longitude, onLocationSelect }) => {
+const ReporterMapMarking = ({
+  disasterType,
+  latitude,
+  longitude,
+  onLocationSelect,
+}) => {
   const mapRef = useRef(null);
   const [map, setMap] = useState(null);
   const [marker, setMarker] = useState(null);
 
-  const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY_DISASTER_REPORT;
+  const GOOGLE_MAPS_API_KEY = import.meta.env
+    .VITE_GOOGLE_MAPS_API_KEY_DISASTER_REPORT;
 
   useEffect(() => {
     if (!window.google) {
@@ -65,7 +71,7 @@ const ReporterMapMarking = ({ disasterType, latitude, longitude, onLocationSelec
       power_cuts: "orange",
       other: "red",
     };
-    const color = colors[type] || "gray";
+    const color = colors[type] || "red";
 
     return {
       path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z",

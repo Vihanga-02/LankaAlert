@@ -62,8 +62,10 @@ const DisasterReportForm = forwardRef(({ formData, setFormData }, ref) => {
   // Expose validation function to parent component
   useImperativeHandle(ref, () => ({
     validateForm: () => {
-      const isValid = validateAllFields();
-      // Mark all fields as touched to show validation errors
+      console.log("validateForm called - Before validation");
+      console.log("Current formData:", formData);
+
+      // Mark all fields as touched first
       setTouched({
         disasterType: true,
         title: true,
@@ -73,65 +75,86 @@ const DisasterReportForm = forwardRef(({ formData, setFormData }, ref) => {
         latitude: true,
         longitude: true,
       });
+
+      // Then validate all fields
+      const isValid = validateAllFields();
+
+      console.log("Validation completed - isValid:", isValid);
+
       return isValid;
     },
     getErrors: () => errors,
     isFormValid: () => Object.keys(errors).length === 0,
+    // For testing - manually trigger validation
+    triggerValidation: () => {
+      setTouched({
+        disasterType: true,
+        title: true,
+        description: true,
+        severity: true,
+        locationDescription: true,
+        latitude: true,
+        longitude: true,
+      });
+      validateAllFields();
+    },
   }));
 
   // Validation rules
   const validateField = (name, value) => {
     const fieldErrors = {};
+    // Handle undefined, null, or empty values
+    const fieldValue = value || "";
 
     switch (name) {
       case "disasterType":
-        if (!value || value.trim() === "") {
+        if (!fieldValue || fieldValue.toString().trim() === "") {
           fieldErrors.disasterType = "Please select a disaster type";
         }
         break;
 
       case "title":
-        if (!value || value.trim() === "") {
+        if (!fieldValue || fieldValue.toString().trim() === "") {
           fieldErrors.title = "Disaster title is required";
-        } else if (value.trim().length < 10) {
+        } else if (fieldValue.toString().trim().length < 10) {
           fieldErrors.title = "Title must be at least 10 characters long";
-        } else if (value.trim().length > 100) {
+        } else if (fieldValue.toString().trim().length > 100) {
           fieldErrors.title = "Title must not exceed 100 characters";
         }
         break;
 
       case "description":
-        if (!value || value.trim() === "") {
+        if (!fieldValue || fieldValue.toString().trim() === "") {
           fieldErrors.description = "Description is required";
-        } else if (value.trim().length < 20) {
+        } else if (fieldValue.toString().trim().length < 20) {
           fieldErrors.description =
             "Description must be at least 20 characters long";
-        } else if (value.trim().length > 1000) {
+        } else if (fieldValue.toString().trim().length > 1000) {
           fieldErrors.description =
             "Description must not exceed 1000 characters";
         }
         break;
 
       case "severity":
-        if (!value || value.trim() === "") {
+        if (!fieldValue || fieldValue.toString().trim() === "") {
           fieldErrors.severity = "Please select a severity level";
         }
         break;
 
       case "locationDescription":
-        if (!value || value.trim() === "") {
+        if (!fieldValue || fieldValue.toString().trim() === "") {
           fieldErrors.locationDescription = "Location description is required";
-        } else if (value.trim().length < 5) {
+        } else if (fieldValue.toString().trim().length < 5) {
           fieldErrors.locationDescription =
             "Location description must be at least 5 characters long";
         }
         break;
 
       case "latitude":
-        if (!value || value.trim() === "") {
+        if (!fieldValue || fieldValue.toString().trim() === "") {
           fieldErrors.latitude = "Latitude is required";
         } else {
-          const lat = parseFloat(value);
+          const lat = parseFloat(fieldValue);
           if (isNaN(lat) || lat < -90 || lat > 90) {
             fieldErrors.latitude = "Latitude must be between -90 and 90";
           }
@@ -139,10 +162,10 @@ const DisasterReportForm = forwardRef(({ formData, setFormData }, ref) => {
         break;
 
       case "longitude":
-        if (!value || value.trim() === "") {
+        if (!fieldValue || fieldValue.toString().trim() === "") {
           fieldErrors.longitude = "Longitude is required";
         } else {
-          const lng = parseFloat(value);
+          const lng = parseFloat(fieldValue);
           if (isNaN(lng) || lng < -180 || lng > 180) {
             fieldErrors.longitude = "Longitude must be between -180 and 180";
           }
@@ -158,6 +181,7 @@ const DisasterReportForm = forwardRef(({ formData, setFormData }, ref) => {
 
   // Validate all fields
   const validateAllFields = () => {
+    console.log("validateAllFields called");
     const allErrors = {};
     const fields = [
       "disasterType",
@@ -170,11 +194,15 @@ const DisasterReportForm = forwardRef(({ formData, setFormData }, ref) => {
     ];
 
     fields.forEach((field) => {
-      const fieldErrors = validateField(field, formData[field]);
+      const fieldValue = formData[field];
+      const fieldErrors = validateField(field, fieldValue);
+      console.log(`Field ${field}:`, fieldValue, "Errors:", fieldErrors);
       Object.assign(allErrors, fieldErrors);
     });
 
+    console.log("All validation errors:", allErrors);
     setErrors(allErrors);
+    console.log("After setErrors, errors state should be updated");
     return Object.keys(allErrors).length === 0;
   };
 
@@ -251,12 +279,16 @@ const DisasterReportForm = forwardRef(({ formData, setFormData }, ref) => {
 
     // Validate field and update errors
     const fieldErrors = validateField(name, value);
-    setErrors((prev) => ({
-      ...prev,
-      ...fieldErrors,
+    setErrors((prev) => {
+      const newErrors = { ...prev, ...fieldErrors };
+
       // Remove error for this field if validation passes
-      [name]: fieldErrors[name] || undefined,
-    }));
+      if (!fieldErrors[name]) {
+        delete newErrors[name];
+      }
+
+      return newErrors;
+    });
   };
 
   // Handle field blur to show validation errors
@@ -265,10 +297,16 @@ const DisasterReportForm = forwardRef(({ formData, setFormData }, ref) => {
     setTouched((prev) => ({ ...prev, [name]: true }));
 
     const fieldErrors = validateField(name, formData[name]);
-    setErrors((prev) => ({
-      ...prev,
-      ...fieldErrors,
-    }));
+    setErrors((prev) => {
+      const newErrors = { ...prev, ...fieldErrors };
+
+      // Remove error for this field if validation passes
+      if (!fieldErrors[name]) {
+        delete newErrors[name];
+      }
+
+      return newErrors;
+    });
   };
 
   const handleCurrentLocation = () => {
@@ -398,43 +436,67 @@ const DisasterReportForm = forwardRef(({ formData, setFormData }, ref) => {
   };
 
   return (
-    <div className="max-w-2xl space-y-6 mx-auto">
-      {/* Validation Summary - Only show if there are errors and some fields are touched */}
-      {Object.keys(errors).length > 0 && Object.keys(touched).length > 0 && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <h3 className="text-sm font-medium text-red-800 mb-2">
+    <div className="max-w-2xl space-y-8 mx-auto bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen p-6">
+      {/* Validation Summary - Show when there are errors and at least one field is touched */}
+      {(() => {
+        const hasErrors = Object.keys(errors).length > 0;
+        const hasTouched = Object.keys(touched).length > 0;
+        console.log(
+          "Error card render check - hasErrors:",
+          hasErrors,
+          "hasTouched:",
+          hasTouched
+        );
+        console.log("Current errors:", errors);
+        console.log("Current touched:", touched);
+        return hasErrors && hasTouched;
+      })() && (
+        <div className="bg-gradient-to-r from-red-50 to-pink-50 border-l-4 border-red-400 rounded-lg p-4 shadow-md">
+          <h3 className="text-sm font-semibold text-red-800 mb-3 flex items-center">
+            <span className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center mr-2">
+              <span className="text-white text-xs">!</span>
+            </span>
             Please fix the following errors:
           </h3>
-          <ul className="text-sm text-red-700 space-y-1">
-            {Object.entries(errors).map(([field, error]) => (
-              <li key={field} className="flex items-center">
-                <span className="w-2 h-2 bg-red-400 rounded-full mr-2"></span>
-                {error}
-              </li>
-            ))}
+          <ul className="text-sm text-red-700 space-y-2">
+            {Object.entries(errors)
+              .filter(
+                ([field, error]) => error && error.toString().trim() !== ""
+              ) // Only show non-empty errors
+              .map(([field, error]) => (
+                <li key={field} className="flex items-center">
+                  <span className="w-2 h-2 bg-red-400 rounded-full mr-3"></span>
+                  {error}
+                </li>
+              ))}
           </ul>
         </div>
       )}
 
       {/* Disaster Information */}
-      <div className="bg-white shadow-md rounded-lg p-6">
-        <h2 className="text-lg font-semibold mb-4">Disaster Information</h2>
+      <div className="bg-white shadow-xl rounded-2xl p-8 border border-slate-200 backdrop-blur-sm">
+        <h2 className="text-2xl font-bold mb-6 text-slate-800 flex items-center">
+          <span className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mr-3">
+            <span className="text-white text-lg">⚠️</span>
+          </span>
+          Disaster Information
+        </h2>
 
         {/* Disaster Type */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-2">
+        <div className="mb-6">
+          <label className="block text-sm font-semibold mb-3 text-slate-700">
             Disaster Type <span className="text-red-500">*</span>
           </label>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {disasterTypes.map((type) => (
               <label
                 key={type.id}
-                className={`flex items-center gap-2 border rounded-lg p-3 cursor-pointer hover:bg-gray-50 ${
+                className={`flex items-center gap-3 border-2 rounded-xl p-4 cursor-pointer transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1 ${
                   formData.disasterType === type.id
-                    ? "border-blue-500 bg-blue-50"
+                    ? "border-blue-500 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-lg"
                     : errors.disasterType && touched.disasterType
-                    ? "border-red-500 bg-red-50"
-                    : "border-gray-300"
+                    ? "border-red-400 bg-gradient-to-r from-red-50 to-pink-50"
+                    : "border-slate-300 bg-white hover:border-blue-300 hover:bg-blue-50"
                 }`}
               >
                 <input
@@ -446,19 +508,24 @@ const DisasterReportForm = forwardRef(({ formData, setFormData }, ref) => {
                   onBlur={handleBlur}
                   className="hidden"
                 />
-                <span className="text-xl">{type.icon}</span>
-                <span>{type.name}</span>
+                <span className="text-2xl">{type.icon}</span>
+                <span className="font-medium text-slate-700">{type.name}</span>
               </label>
             ))}
           </div>
           {errors.disasterType && touched.disasterType && (
-            <p className="text-red-500 text-sm mt-1">{errors.disasterType}</p>
+            <p className="text-red-500 text-sm mt-2 flex items-center">
+              <span className="w-4 h-4 bg-red-500 rounded-full flex items-center justify-center mr-2">
+                <span className="text-white text-xs">!</span>
+              </span>
+              {errors.disasterType}
+            </p>
           )}
         </div>
 
         {/* Title */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-2">
+        <div className="mb-6">
+          <label className="block text-sm font-semibold mb-3 text-slate-700">
             Disaster Title <span className="text-red-500">*</span>
           </label>
           <input
@@ -468,23 +535,31 @@ const DisasterReportForm = forwardRef(({ formData, setFormData }, ref) => {
             onChange={handleChange}
             onBlur={handleBlur}
             placeholder="e.g., Heavy flooding in Colombo"
-            className={`w-full border rounded-lg p-2 ${
+            className={`w-full border-2 rounded-xl p-4 transition-all duration-300 ${
               errors.title && touched.title
-                ? "border-red-500 bg-red-50 focus:border-red-500"
-                : "border-gray-300 focus:border-blue-500"
-            } focus:outline-none focus:ring-1 focus:ring-blue-500`}
+                ? "border-red-400 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-200"
+                : "border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+            } focus:outline-none bg-white`}
           />
           {errors.title && touched.title && (
-            <p className="text-red-500 text-sm mt-1">{errors.title}</p>
+            <p className="text-red-500 text-sm mt-2 flex items-center">
+              <span className="w-4 h-4 bg-red-500 rounded-full flex items-center justify-center mr-2">
+                <span className="text-white text-xs">!</span>
+              </span>
+              {errors.title}
+            </p>
           )}
-          <p className="text-gray-500 text-xs mt-1">
+          <p className="text-slate-500 text-xs mt-2 flex items-center">
+            <span className="w-4 h-4 bg-slate-400 rounded-full flex items-center justify-center mr-2">
+              <span className="text-white text-xs">i</span>
+            </span>
             {formData.title ? formData.title.length : 0}/100 characters
           </p>
         </div>
 
         {/* Severity */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-2">
+        <div className="mb-6">
+          <label className="block text-sm font-semibold mb-3 text-slate-700">
             Severity Level <span className="text-red-500">*</span>
           </label>
           <select
@@ -492,25 +567,30 @@ const DisasterReportForm = forwardRef(({ formData, setFormData }, ref) => {
             value={formData.severity}
             onChange={handleChange}
             onBlur={handleBlur}
-            className={`w-full border rounded-lg p-2 ${
+            className={`w-full border-2 rounded-xl p-4 transition-all duration-300 ${
               errors.severity && touched.severity
-                ? "border-red-500 bg-red-50 focus:border-red-500"
-                : "border-gray-300 focus:border-blue-500"
-            } focus:outline-none focus:ring-1 focus:ring-blue-500`}
+                ? "border-red-400 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-200"
+                : "border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+            } focus:outline-none bg-white`}
           >
             <option value="">Select severity level</option>
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
+            <option value="low">🟢 Low</option>
+            <option value="medium">🟡 Medium</option>
+            <option value="high">🔴 High</option>
           </select>
           {errors.severity && touched.severity && (
-            <p className="text-red-500 text-sm mt-1">{errors.severity}</p>
+            <p className="text-red-500 text-sm mt-2 flex items-center">
+              <span className="w-4 h-4 bg-red-500 rounded-full flex items-center justify-center mr-2">
+                <span className="text-white text-xs">!</span>
+              </span>
+              {errors.severity}
+            </p>
           )}
         </div>
 
         {/* Description */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-2">
+        <div className="mb-6">
+          <label className="block text-sm font-semibold mb-3 text-slate-700">
             Description <span className="text-red-500">*</span>
           </label>
           <textarea
@@ -520,16 +600,24 @@ const DisasterReportForm = forwardRef(({ formData, setFormData }, ref) => {
             onBlur={handleBlur}
             placeholder="Provide detailed information about the disaster..."
             rows={4}
-            className={`w-full border rounded-lg p-2 ${
+            className={`w-full border-2 rounded-xl p-4 transition-all duration-300 resize-none ${
               errors.description && touched.description
-                ? "border-red-500 bg-red-50 focus:border-red-500"
-                : "border-gray-300 focus:border-blue-500"
-            } focus:outline-none focus:ring-1 focus:ring-blue-500`}
+                ? "border-red-400 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-200"
+                : "border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+            } focus:outline-none bg-white`}
           />
           {errors.description && touched.description && (
-            <p className="text-red-500 text-sm mt-1">{errors.description}</p>
+            <p className="text-red-500 text-sm mt-2 flex items-center">
+              <span className="w-4 h-4 bg-red-500 rounded-full flex items-center justify-center mr-2">
+                <span className="text-white text-xs">!</span>
+              </span>
+              {errors.description}
+            </p>
           )}
-          <p className="text-gray-500 text-xs mt-1">
+          <p className="text-slate-500 text-xs mt-2 flex items-center">
+            <span className="w-4 h-4 bg-slate-400 rounded-full flex items-center justify-center mr-2">
+              <span className="text-white text-xs">i</span>
+            </span>
             {formData.description ? formData.description.length : 0}/1000
             characters
           </p>
@@ -537,18 +625,20 @@ const DisasterReportForm = forwardRef(({ formData, setFormData }, ref) => {
       </div>
 
       {/* Image Upload Section */}
-      <div className="bg-white shadow-md rounded-lg p-6">
-        <h2 className="text-lg font-semibold mb-4 flex items-center">
-          <Camera className="w-5 h-5 mr-2" />
+      <div className="bg-white shadow-xl rounded-2xl p-8 border border-slate-200 backdrop-blur-sm">
+        <h2 className="text-2xl font-bold mb-6 text-slate-800 flex items-center">
+          <span className="w-8 h-8 bg-gradient-to-r from-green-500 to-teal-600 rounded-lg flex items-center justify-center mr-3">
+            <Camera className="w-5 h-5 text-white" />
+          </span>
           Disaster Images
         </h2>
 
         {/* Upload Area */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-2">
+        <div className="mb-6">
+          <label className="block text-sm font-semibold mb-3 text-slate-700">
             Upload Images (Max 5, 5MB each)
           </label>
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+          <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-blue-400 transition-all duration-300 bg-gradient-to-br from-slate-50 to-blue-50 hover:from-blue-50 hover:to-indigo-50">
             <input
               type="file"
               multiple
@@ -558,11 +648,13 @@ const DisasterReportForm = forwardRef(({ formData, setFormData }, ref) => {
               id="image-upload"
             />
             <label htmlFor="image-upload" className="cursor-pointer">
-              <Upload className="w-12 h-12 mx-auto text-gray-400 mb-2" />
-              <p className="text-gray-600 mb-2">
+              <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center">
+                <Upload className="w-8 h-8 text-white" />
+              </div>
+              <p className="text-slate-700 mb-2 font-medium text-lg">
                 Click to upload disaster images
               </p>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-slate-500">
                 Supports JPG, PNG, GIF up to 5MB each
               </p>
             </label>
@@ -571,22 +663,25 @@ const DisasterReportForm = forwardRef(({ formData, setFormData }, ref) => {
 
         {/* Image Previews */}
         {imagePreviews.length > 0 && (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
             {imagePreviews.map((image) => (
               <div key={image.id} className="relative group">
-                <img
-                  src={image.url}
-                  alt={image.name}
-                  className="w-full h-32 object-cover rounded-lg border border-gray-300"
-                />
-                <button
-                  type="button"
-                  onClick={() => removeImage(image.id)}
-                  className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-                <p className="text-xs text-gray-600 mt-1 truncate">
+                <div className="relative overflow-hidden rounded-xl border-2 border-slate-200 shadow-md transition-all duration-300 hover:shadow-xl">
+                  <img
+                    src={image.url}
+                    alt={image.name}
+                    className="w-full h-36 object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <button
+                    type="button"
+                    onClick={() => removeImage(image.id)}
+                    className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-lg"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <p className="text-xs text-slate-600 mt-2 truncate font-medium">
                   {image.name}
                 </p>
               </div>
@@ -595,19 +690,29 @@ const DisasterReportForm = forwardRef(({ formData, setFormData }, ref) => {
         )}
 
         {selectedImages.length > 0 && (
-          <p className="text-sm text-gray-600 mt-2">
-            {selectedImages.length} image(s) selected
-          </p>
+          <div className="mt-4 p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
+            <p className="text-sm text-green-700 font-medium flex items-center">
+              <span className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center mr-2">
+                <span className="text-white text-xs">✓</span>
+              </span>
+              {selectedImages.length} image(s) selected
+            </p>
+          </div>
         )}
       </div>
 
       {/* Location Information */}
-      <div className="bg-white shadow-md rounded-lg p-6">
-        <h2 className="text-lg font-semibold mb-4">Location Information</h2>
+      <div className="bg-white shadow-xl rounded-2xl p-8 border border-slate-200 backdrop-blur-sm">
+        <h2 className="text-2xl font-bold mb-6 text-slate-800 flex items-center">
+          <span className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-600 rounded-lg flex items-center justify-center mr-3">
+            <MapPin className="w-5 h-5 text-white" />
+          </span>
+          Location Information
+        </h2>
 
         {/* Location Description */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-2">
+        <div className="mb-6">
+          <label className="block text-sm font-semibold mb-3 text-slate-700">
             Location Description <span className="text-red-500">*</span>
           </label>
           <input
@@ -617,23 +722,26 @@ const DisasterReportForm = forwardRef(({ formData, setFormData }, ref) => {
             onChange={handleChange}
             onBlur={handleBlur}
             placeholder="e.g., Colombo 07, near Manning Market"
-            className={`w-full border rounded-lg p-2 ${
+            className={`w-full border-2 rounded-xl p-4 transition-all duration-300 ${
               errors.locationDescription && touched.locationDescription
-                ? "border-red-500 bg-red-50 focus:border-red-500"
-                : "border-gray-300 focus:border-blue-500"
-            } focus:outline-none focus:ring-1 focus:ring-blue-500`}
+                ? "border-red-400 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-200"
+                : "border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+            } focus:outline-none bg-white`}
           />
           {errors.locationDescription && touched.locationDescription && (
-            <p className="text-red-500 text-sm mt-1">
+            <p className="text-red-500 text-sm mt-2 flex items-center">
+              <span className="w-4 h-4 bg-red-500 rounded-full flex items-center justify-center mr-2">
+                <span className="text-white text-xs">!</span>
+              </span>
               {errors.locationDescription}
             </p>
           )}
         </div>
 
         {/* Latitude & Longitude */}
-        <div className="grid grid-cols-2 gap-4 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <div>
-            <label className="block text-sm font-medium mb-2">
+            <label className="block text-sm font-semibold mb-3 text-slate-700">
               Latitude <span className="text-red-500">*</span>
             </label>
             <input
@@ -646,18 +754,23 @@ const DisasterReportForm = forwardRef(({ formData, setFormData }, ref) => {
               step="any"
               min="-90"
               max="90"
-              className={`w-full border rounded-lg p-2 ${
+              className={`w-full border-2 rounded-xl p-4 transition-all duration-300 ${
                 errors.latitude && touched.latitude
-                  ? "border-red-500 bg-red-50 focus:border-red-500"
-                  : "border-gray-300 focus:border-blue-500"
-              } focus:outline-none focus:ring-1 focus:ring-blue-500`}
+                  ? "border-red-400 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-200"
+                  : "border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+              } focus:outline-none bg-white`}
             />
             {errors.latitude && touched.latitude && (
-              <p className="text-red-500 text-sm mt-1">{errors.latitude}</p>
+              <p className="text-red-500 text-sm mt-2 flex items-center">
+                <span className="w-4 h-4 bg-red-500 rounded-full flex items-center justify-center mr-2">
+                  <span className="text-white text-xs">!</span>
+                </span>
+                {errors.latitude}
+              </p>
             )}
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2">
+            <label className="block text-sm font-semibold mb-3 text-slate-700">
               Longitude <span className="text-red-500">*</span>
             </label>
             <input
@@ -670,14 +783,19 @@ const DisasterReportForm = forwardRef(({ formData, setFormData }, ref) => {
               step="any"
               min="-180"
               max="180"
-              className={`w-full border rounded-lg p-2 ${
+              className={`w-full border-2 rounded-xl p-4 transition-all duration-300 ${
                 errors.longitude && touched.longitude
-                  ? "border-red-500 bg-red-50 focus:border-red-500"
-                  : "border-gray-300 focus:border-blue-500"
-              } focus:outline-none focus:ring-1 focus:ring-blue-500`}
+                  ? "border-red-400 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-200"
+                  : "border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+              } focus:outline-none bg-white`}
             />
             {errors.longitude && touched.longitude && (
-              <p className="text-red-500 text-sm mt-1">{errors.longitude}</p>
+              <p className="text-red-500 text-sm mt-2 flex items-center">
+                <span className="w-4 h-4 bg-red-500 rounded-full flex items-center justify-center mr-2">
+                  <span className="text-white text-xs">!</span>
+                </span>
+                {errors.longitude}
+              </p>
             )}
           </div>
         </div>
@@ -686,7 +804,7 @@ const DisasterReportForm = forwardRef(({ formData, setFormData }, ref) => {
         <button
           type="button"
           onClick={handleCurrentLocation}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 mb-4"
+          className="flex items-center gap-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-6 py-4 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 mb-6"
         >
           <MapPin className="w-5 h-5" />
           Use Current Location
@@ -694,7 +812,7 @@ const DisasterReportForm = forwardRef(({ formData, setFormData }, ref) => {
 
         {/* Google Map */}
         {formData.latitude && formData.longitude && (
-          <div className="h-64 w-full rounded-lg overflow-hidden border border-gray-300">
+          <div className="h-72 w-full rounded-2xl overflow-hidden border-2 border-slate-300 shadow-xl">
             <ReporterMapMarking
               disasterType={formData.disasterType}
               latitude={parseFloat(formData.latitude)}

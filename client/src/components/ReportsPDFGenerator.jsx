@@ -5,7 +5,17 @@ import { storage } from "../services/firebase";
 import { ref, getBlob, getDownloadURL } from "firebase/storage";
 
 const ReportsPDFGenerator = forwardRef(
-  ({ reports, user, calculateReportPoints, className = "" }, ref) => {
+  (
+    {
+      reports,
+      user,
+      calculateReportPoints,
+      className = "",
+      onSuccess,
+      onError,
+    },
+    ref
+  ) => {
     const [pdfGenerating, setPdfGenerating] = useState(false);
     const [generatingReportId, setGeneratingReportId] = useState(null);
     const [loadingProgress, setLoadingProgress] = useState(0);
@@ -65,11 +75,7 @@ const ReportsPDFGenerator = forwardRef(
                       canvas.width = img.naturalWidth;
                       canvas.height = img.naturalHeight;
 
-                      // White background
-                      ctx.fillStyle = "#FFFFFF";
-                      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-                      // Draw image
+                      // Draw image directly without white background
                       ctx.drawImage(img, 0, 0);
 
                       const dataURL = canvas.toDataURL("image/jpeg", 0.8);
@@ -436,8 +442,11 @@ const ReportsPDFGenerator = forwardRef(
       };
     };
 
-    // Enhanced PDF Download Functions with Beautiful Styling
+    // Enhanced PDF Download Functions with Elegant Modern Styling
     const downloadIndividualReportPDF = async (report) => {
+      console.log("🔍 DEBUG: Report data:", report);
+      console.log("🔍 DEBUG: User data:", user);
+
       if (pdfGenerating) {
         alert("Another PDF is currently being generated. Please wait...");
         return;
@@ -447,9 +456,12 @@ const ReportsPDFGenerator = forwardRef(
         setGeneratingReportId(report.id);
         setPdfGenerating(true);
         setLoadingProgress(0);
-        setLoadingMessage("Initializing PDF generation...");
+        setLoadingMessage("Initializing elegant PDF generation...");
 
-        console.log("🚀 Starting PDF generation for report:", report.id);
+        console.log(
+          "🚀 Starting elegant PDF generation for report:",
+          report.id
+        );
 
         const pdf = new jsPDF();
         const pageWidth = pdf.internal.pageSize.getWidth();
@@ -457,363 +469,493 @@ const ReportsPDFGenerator = forwardRef(
         const margin = 20;
         let yPos = margin;
 
-        // Add header function
-        const addHeader = () => {
-          // Header background
-          pdf.setFillColor(59, 130, 246); // Blue-500
-          pdf.rect(0, 0, pageWidth, 40, "F");
-
-          // LankaAlert logo/title
-          pdf.setTextColor(255, 255, 255);
-          pdf.setFontSize(18);
-          pdf.setFont(undefined, "bold");
-          pdf.text("LankaAlert", margin, 20);
-
-          // Subtitle
-          pdf.setFontSize(10);
-          pdf.setFont(undefined, "normal");
-          pdf.text("Disaster Management System", margin, 30);
-
-          // Date and time
-          pdf.text(
-            `Generated: ${new Date().toLocaleString()}`,
-            pageWidth - margin - 50,
-            20
-          );
-          pdf.text("Individual Report", pageWidth - margin - 50, 30);
-
-          return 50; // Return where content should start
+        // Enhanced color palette for modern design
+        const colors = {
+          primary: [37, 99, 235], // Blue-600
+          primaryLight: [219, 234, 254], // Blue-100
+          secondary: [99, 102, 241], // Indigo-500
+          accent: [236, 72, 153], // Pink-500
+          success: [34, 197, 94], // Green-500
+          warning: [245, 158, 11], // Amber-500
+          danger: [239, 68, 68], // Red-500
+          gray: [107, 114, 128], // Gray-500
+          lightGray: [249, 250, 251], // Gray-50
+          darkGray: [31, 41, 55], // Gray-800
+          white: [255, 255, 255],
         };
 
-        // Add footer function
+        // Professional header with clean design
+        const addHeader = async () => {
+          // Primary header background
+          pdf.setFillColor(...colors.primary);
+          pdf.rect(0, 0, pageWidth, 45, "F");
+
+          // Add subtle accent line
+          pdf.setFillColor(...colors.accent);
+          pdf.rect(0, 42, pageWidth, 3, "F");
+
+          // Load and add logo without background
+          const logo = await prepareImageForPDF('/logo.png');
+          const logoHeight = 15;
+          const logoWidth = (logoHeight * logo.width) / logo.height;
+          pdf.addImage(logo.dataURL, 'PNG', margin, 12, logoWidth, logoHeight, '', 'NONE');
+
+          // LankaAlert logo/title
+          pdf.setTextColor(...colors.white);
+          pdf.setFontSize(24);
+          pdf.setFont("helvetica", "bold");
+          pdf.text("LankaAlert", margin + logoWidth + 5, 22);
+
+          // Elegant subtitle
+          pdf.setFontSize(11);
+          pdf.setFont("helvetica", "normal");
+          pdf.text("Disaster Management & Early Warning System", margin, 32);
+
+          // Professional header info on the right
+          pdf.setFontSize(9);
+          pdf.setFont("helvetica", "normal");
+          const headerRight = pageWidth - margin - 5;
+          pdf.text("INDIVIDUAL REPORT", headerRight, 18, { align: "right" });
+          pdf.text(
+            `Generated: ${new Date().toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            })}`,
+            headerRight,
+            28,
+            { align: "right" }
+          );
+          pdf.text("Confidential Document", headerRight, 36, {
+            align: "right",
+          });
+
+          return 55; // Return where content should start
+        };
+
+        // Professional footer with elegant design
         const addFooter = () => {
           const footerY = pageHeight - 25;
 
-          // Footer line
-          pdf.setDrawColor(59, 130, 246);
+          // Add signature line above footer
+          const signatureY = footerY - 15;
+          pdf.setDrawColor(...colors.gray);
           pdf.setLineWidth(0.5);
-          pdf.line(margin, footerY, pageWidth - margin, footerY);
-
-          // Footer text
-          pdf.setTextColor(107, 114, 128); // Gray-500
+          pdf.line(margin, signatureY, margin + 150, signatureY);
           pdf.setFontSize(8);
-          pdf.setFont(undefined, "normal");
-          pdf.text("LankaAlert - Keeping Sri Lanka Safe", margin, footerY + 10);
-          pdf.text(`Page 1 of 1`, pageWidth - margin - 30, footerY + 10);
+          pdf.setTextColor(...colors.gray);
+          pdf.text('Reporter Signature', margin, signatureY - 5);
+
+          // Footer accent line
+          pdf.setFillColor(...colors.accent);
+          pdf.rect(0, footerY - 5, pageWidth, 2, "F");
+
+          // Footer background
+          pdf.setFillColor(...colors.lightGray);
+          pdf.rect(0, footerY - 3, pageWidth, 20, "F");
+
+          // Professional footer content
+          pdf.setTextColor(...colors.gray);
+          pdf.setFontSize(8);
+          pdf.setFont("helvetica", "normal");
+
+          // Left side - Organization info
           pdf.text(
-            "Email: support@lankaalert.lk | Website: www.lankaalert.lk",
-            pageWidth / 2,
-            footerY + 15,
+            "LankaAlert - Protecting Sri Lanka Together",
+            margin,
+            footerY + 8
+          );
+          pdf.text(
+            "Ministry of Disaster Management | Emergency Response Division",
+            margin,
+            footerY + 16
+          );
+
+          // Center - Contact information
+          const centerX = pageWidth / 2;
+          pdf.text(
+            "Email: contact@lankaalert.gov.lk | Phone: 1919 (Emergency Hotline)",
+            centerX,
+            footerY + 8,
             { align: "center" }
           );
+          pdf.text(
+            "Website: www.lankaalert.gov.lk | Follow @LankaAlert",
+            centerX,
+            footerY + 16,
+            { align: "center" }
+          );
+
+          // Right side - Page info (placeholder - will be updated after content generation)
+          pdf.text("Page X of Y", pageWidth - margin, footerY + 12, {
+            align: "right",
+          });
         };
 
-        // Add header
-        setLoadingProgress(10);
-        setLoadingMessage("Building PDF structure...");
-        yPos = addHeader();
-        yPos += 10;
-
-        // Report title with colored background
-        pdf.setFillColor(239, 246, 255); // Blue-50
-        pdf.rect(margin, yPos - 5, pageWidth - 2 * margin, 25, "F");
-        pdf.setTextColor(30, 64, 175); // Blue-800
-        pdf.setFontSize(16);
-        pdf.setFont(undefined, "bold");
-        pdf.text(
-          `Disaster Report: ${report.title || "Untitled Report"}`,
-          margin + 10,
-          yPos + 10
-        );
-        yPos += 35;
-
-        // Report ID and status
-        pdf.setTextColor(75, 85, 99); // Gray-600
-        pdf.setFontSize(10);
-        pdf.setFont(undefined, "normal");
-        pdf.text(`Report ID: ${report.id || "N/A"}`, margin, yPos);
-
-        // Severity badge
-        const severityColors = {
-          high: { bg: [239, 68, 68], text: [255, 255, 255] }, // Red
-          medium: { bg: [245, 158, 11], text: [255, 255, 255] }, // Orange
-          low: { bg: [34, 197, 94], text: [255, 255, 255] }, // Green
-        };
-
-        const severityColor =
-          severityColors[report.severity?.toLowerCase()] || severityColors.low;
-        pdf.setFillColor(...severityColor.bg);
-        pdf.rect(pageWidth - margin - 60, yPos - 8, 50, 12, "F");
-        pdf.setTextColor(...severityColor.text);
-        pdf.setFont(undefined, "bold");
-        pdf.text(
-          `${(report.severity || "LOW").toUpperCase()}`,
-          pageWidth - margin - 35,
-          yPos - 1,
-          { align: "center" }
-        );
-        yPos += 20;
-
-        // Details section
-        pdf.setTextColor(31, 41, 55); // Gray-800
-        pdf.setFontSize(12);
-        pdf.setFont(undefined, "bold");
-        pdf.text("Report Details", margin, yPos);
+        // Add enhanced header
+        setLoadingProgress(15);
+        setLoadingMessage("Creating professional document structure...");
+        yPos = await addHeader();
         yPos += 15;
 
-        // Create a styled details box
-        pdf.setFillColor(249, 250, 251); // Gray-50
-        pdf.rect(margin, yPos - 5, pageWidth - 2 * margin, 80, "F");
-        pdf.setDrawColor(229, 231, 235); // Gray-200
-        pdf.rect(margin, yPos - 5, pageWidth - 2 * margin, 80, "S");
+        // Modern report title section with card-like design
+        pdf.setFillColor(...colors.primaryLight);
+        pdf.rect(margin, yPos - 8, pageWidth - 2 * margin, 35, "F");
+        pdf.setDrawColor(...colors.primary);
+        pdf.setLineWidth(0.5);
+        pdf.rect(margin, yPos - 8, pageWidth - 2 * margin, 35, "S");
 
-        pdf.setTextColor(55, 65, 81); // Gray-700
+        pdf.setTextColor(...colors.darkGray);
+        pdf.setFontSize(18);
+        pdf.setFont("helvetica", "bold");
+        pdf.text(`${report.title || "Disaster Report"}`, margin + 10, yPos + 8);
+
+        // Report metadata
         pdf.setFontSize(10);
-        pdf.setFont(undefined, "normal");
+        pdf.setFont("helvetica", "normal");
+        pdf.setTextColor(...colors.gray);
+        pdf.text(
+          `Reported by: ${
+            report.reporterName ? `${report.reporterName} (${report.reporterEmail || 'No email'})` : 
+            user?.email || report.reporterEmail || "Anonymous Reporter"
+          }`,
+          margin + 10,
+          yPos + 18
+        );
+        yPos += 45;
 
-        const details = [
-          { label: "Disaster Type:", value: report.disasterType || "N/A" },
-          { label: "Location:", value: report.locationDescription || "N/A" },
-          { label: "District:", value: report.district || "N/A" },
-          { label: "City:", value: report.city || "N/A" },
-          {
-            label: "Coordinates:",
-            value: `${report.latitude || "N/A"}, ${report.longitude || "N/A"}`,
+        // Severity indicator with clean badge design
+        const severityConfig = {
+          high: {
+            color: colors.danger,
+            label: "HIGH PRIORITY",
+            bgColor: [254, 242, 242],
           },
-          { label: "Reporter:", value: report.reporterEmail || "N/A" },
+          medium: {
+            color: colors.warning,
+            label: "MEDIUM PRIORITY",
+            bgColor: [255, 251, 235],
+          },
+          low: {
+            color: colors.success,
+            label: "LOW PRIORITY",
+            bgColor: [240, 253, 244],
+          },
+        };
+
+        const severity =
+          severityConfig[report.severity?.toLowerCase()] || severityConfig.low;
+
+        // Severity badge background
+        pdf.setFillColor(...severity.bgColor);
+        pdf.rect(pageWidth - margin - 85, yPos - 5, 75, 20, "F");
+        pdf.setDrawColor(...severity.color);
+        pdf.setLineWidth(1);
+        pdf.rect(pageWidth - margin - 85, yPos - 5, 75, 20, "S");
+
+        // Severity text
+        pdf.setTextColor(...severity.color);
+        pdf.setFontSize(10);
+        pdf.setFont("helvetica", "bold");
+        pdf.text(severity.label, pageWidth - margin - 47.5, yPos + 7, {
+          align: "center",
+        });
+        yPos += 25;
+
+        // Main information section with clean design
+        pdf.setTextColor(...colors.darkGray);
+        pdf.setFontSize(14);
+        pdf.setFont("helvetica", "bold");
+        pdf.text("Report Information", margin, yPos);
+        yPos += 20;
+
+        // Information cards with clean styling
+        const infoSections = [
           {
-            label: "Date Created:",
-            value: report.createdAt?.toDate
-              ? report.createdAt.toDate().toLocaleString()
-              : "N/A",
+            title: "Location Details",
+            items: [
+              {
+                label: "Primary Location",
+                value: report.locationDescription || "Not specified",
+              },
+              { label: "District", value: report.district || "Not specified" },
+              { label: "City/Town", value: report.city || "Not specified" },
+              {
+                label: "GPS Coordinates",
+                value:
+                  report.latitude && report.longitude
+                    ? `${parseFloat(report.latitude).toFixed(6)}, ${parseFloat(
+                        report.longitude
+                      ).toFixed(6)}`
+                    : "Not available",
+              },
+            ],
           },
           {
-            label: "Points Earned:",
-            value: `${calculateReportPoints(report, reports)} points`,
+            title: "Incident Details",
+            items: [
+              {
+                label: "Disaster Type",
+                value: report.disasterType || "Not classified",
+              },
+              {
+                label: "Severity Level",
+                value:
+                  (report.severity || "medium").charAt(0).toUpperCase() +
+                  (report.severity || "medium").slice(1),
+              },
+              {
+                label: "Reported By",
+                value:
+                  user?.email || report.reporterEmail || "Anonymous Reporter",
+              },
+              {
+                label: "Report Date",
+                value: report.createdAt?.toDate
+                  ? report.createdAt.toDate().toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                  : "Not available",
+              },
+            ],
+          },
+          {
+            title: "Assessment Metrics",
+            items: [
+              {
+                label: "Points Awarded",
+                value: `${calculateReportPoints(report, reports)} points`,
+              },
+              {
+                label: "Report Quality",
+                value:
+                  report.description?.length > 100
+                    ? "Detailed"
+                    : report.description?.length > 50
+                    ? "Good"
+                    : report.description?.length > 0
+                    ? "Basic"
+                    : "Minimal",
+              },
+              { label: "Status", value: "Active Report" },
+            ],
           },
         ];
 
-        details.forEach((detail, index) => {
-          const detailY = yPos + index * 8;
-          pdf.setFont(undefined, "bold");
-          pdf.text(detail.label, margin + 10, detailY);
-          pdf.setFont(undefined, "normal");
-          pdf.text(detail.value, margin + 80, detailY);
+        console.log("🔍 DEBUG: Info sections:", infoSections);
+
+        setLoadingProgress(40);
+        setLoadingMessage("Formatting report information...");
+
+        infoSections.forEach((section, sectionIndex) => {
+          console.log(
+            "🔍 DEBUG: Processing section:",
+            section.title,
+            section.items
+          );
+
+          // Check if we need a new page before section header
+          if (yPos > pageHeight - 60) {
+            pdf.addPage();
+            yPos = 40; // Reset yPos for new page
+          }
+
+          // Section header with modern styling
+          pdf.setFillColor(...colors.lightGray);
+          pdf.rect(margin, yPos - 3, pageWidth - 2 * margin, 18, "F");
+          pdf.setDrawColor(...colors.primary);
+          pdf.setLineWidth(0.3);
+          pdf.rect(margin, yPos - 3, pageWidth - 2 * margin, 18, "S");
+
+          pdf.setTextColor(...colors.primary);
+          pdf.setFontSize(12);
+          pdf.setFont("helvetica", "bold");
+          pdf.text(section.title, margin + 8, yPos + 8);
+          yPos += 25;
+
+          // Section items with alternating backgrounds
+          section.items.forEach((item, index) => {
+            // Check if we need a new page before each item
+            if (yPos > pageHeight - 40) {
+              pdf.addPage();
+              yPos = 40; // Reset yPos for new page
+            }
+
+            // Alternating row colors for better readability
+            if (index % 2 === 0) {
+              pdf.setFillColor(252, 252, 252);
+              pdf.rect(margin, yPos - 3, pageWidth - 2 * margin, 12, "F");
+            }
+
+            pdf.setTextColor(...colors.darkGray);
+            pdf.setFontSize(10);
+            pdf.setFont("helvetica", "bold");
+            pdf.text(`${item.label}:`, margin + 12, yPos + 4);
+
+            pdf.setFont("helvetica", "normal");
+            pdf.setTextColor(...colors.gray);
+            pdf.text(item.value, margin + 85, yPos + 4);
+            yPos += 12;
+          });
+
+          yPos += 15; // Space between sections
         });
 
-        yPos += 90;
+        // Clean description section
+        if (report.description && report.description.trim()) {
+          // Check if we need a new page for description section
+          if (yPos > pageHeight - 80) {
+            pdf.addPage();
+            yPos = 40; // Reset yPos for new page
+          }
 
-        // Description section
-        if (report.description) {
-          pdf.setTextColor(31, 41, 55); // Gray-800
-          pdf.setFontSize(12);
-          pdf.setFont(undefined, "bold");
-          pdf.text("Description", margin, yPos);
-          yPos += 15;
+          pdf.setTextColor(...colors.darkGray);
+          pdf.setFontSize(14);
+          pdf.setFont("helvetica", "bold");
+          pdf.text("Detailed Description", margin, yPos);
+          yPos += 10;
 
-          pdf.setFillColor(254, 249, 195); // Yellow-50
-          pdf.rect(margin, yPos - 5, pageWidth - 2 * margin, 40, "F");
-          pdf.setDrawColor(253, 224, 71); // Yellow-300
-          pdf.rect(margin, yPos - 5, pageWidth - 2 * margin, 40, "S");
+          // Description container with clean styling
+          const descriptionHeight = Math.max(
+            35,
+            Math.ceil(report.description.length / 80) * 6
+          );
+          pdf.setFillColor(250, 250, 250);
+          pdf.rect(
+            margin,
+            yPos - 5,
+            pageWidth - 2 * margin,
+            descriptionHeight,
+            "F"
+          );
+          pdf.setDrawColor(...colors.primaryLight);
+          pdf.setLineWidth(0.5);
+          pdf.rect(
+            margin,
+            yPos - 5,
+            pageWidth - 2 * margin,
+            descriptionHeight,
+            "S"
+          );
 
-          pdf.setTextColor(55, 65, 81); // Gray-700
+          // Left border accent
+          pdf.setFillColor(...colors.accent);
+          pdf.rect(margin, yPos - 5, 4, descriptionHeight, "F");
+
+          pdf.setTextColor(...colors.darkGray);
           pdf.setFontSize(10);
-          pdf.setFont(undefined, "normal");
+          pdf.setFont("helvetica", "normal");
 
           const splitDescription = pdf.splitTextToSize(
             report.description,
             pageWidth - 2 * margin - 20
           );
-          pdf.text(splitDescription, margin + 10, yPos + 5);
-          yPos += Math.max(40, splitDescription.length * 5) + 15;
+          pdf.text(splitDescription, margin + 15, yPos + 8);
+          yPos += descriptionHeight + 30;
+
+          // Add signature line
+          pdf.setDrawColor(...colors.gray);
+          pdf.setLineWidth(0.5);
+          const signatureLineWidth = 150;
+          pdf.line(margin, yPos - 10, margin + signatureLineWidth, yPos - 10);
+          
+          
         }
 
-        // Images section
-        if (report.images && report.images.length > 0) {
-          pdf.setTextColor(31, 41, 55); // Gray-800
-          pdf.setFontSize(12);
-          pdf.setFont(undefined, "bold");
-          pdf.text(`Images (${report.images.length})`, margin, yPos);
-          yPos += 15;
+        
 
-          for (let i = 0; i < report.images.length; i++) {
-            const imageUrl = report.images[i];
-            try {
-              // Update progress
-              const imageProgress = ((i + 1) / report.images.length) * 80; // Images take 80% of total progress
-              setLoadingProgress(20 + imageProgress); // 20% for PDF setup + image progress
-              setLoadingMessage(
-                `Processing image ${i + 1} of ${report.images.length}...`
-              );
+        
 
-              // Check if we need a new page
-              if (yPos + 100 > pageHeight - 40) {
-                pdf.addPage();
-                yPos = addHeader() + 20;
-              }
+        
 
-              console.log(`Processing image ${i + 1}:`, imageUrl);
+        // Professional document verification section
+        pdf.setFillColor(...colors.primaryLight);
+        pdf.rect(margin, yPos - 5, pageWidth - 2 * margin, 25, "F");
+        pdf.setDrawColor(...colors.primary);
+        pdf.setLineWidth(0.3);
+        pdf.rect(margin, yPos - 5, pageWidth - 2 * margin, 25, "S");
 
-              // Simple direct image loading - no base64 conversion needed for Firebase Storage URLs
-              let imageData;
-              try {
-                console.log("🔄 Loading Firebase Storage image directly...");
+        pdf.setTextColor(...colors.primary);
+        pdf.setFontSize(10);
+        pdf.setFont("helvetica", "bold");
+        pdf.text("🔒 Document Verification", margin + 10, yPos + 5);
 
-                // Direct loading of Firebase Storage URL using existing loadImageForPDF function
-                imageData = await Promise.race([
-                  prepareImageForPDF(imageUrl),
-                  new Promise((_, reject) =>
-                    setTimeout(
-                      () =>
-                        reject(
-                          new Error("Image load timeout - using placeholder")
-                        ),
-                      5000
-                    )
-                  ),
-                ]);
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(8);
+        pdf.setTextColor(...colors.gray);
+        pdf.text(
+          `This document was automatically generated on ${new Date().toISOString()} and contains verified disaster report information.`,
+          margin + 10,
+          yPos + 13
+        );
 
-                if (
-                  imageData &&
-                  imageData.dataURL &&
-                  !imageData.isPlaceholder
-                ) {
-                  console.log("✅ Successfully loaded actual image:", {
-                    width: imageData.width,
-                    height: imageData.height,
-                  });
-                } else {
-                  console.log("⚠️ Image loading returned placeholder data");
-                }
-              } catch (error) {
-                console.error("❌ Image loading failed quickly:", error);
-                console.log("🔧 Creating informative placeholder...");
-
-                // Create a more informative placeholder with report details
-                const placeholderText = `Image ${i + 1} from ${
-                  report.disasterType || "disaster"
-                } report in ${report.location || "unknown location"}`;
-                imageData = createPlaceholderImage(placeholderText);
-              }
-
-              // Image frame
-              pdf.setFillColor(255, 255, 255);
-              pdf.rect(margin, yPos - 5, 120, 85, "F");
-              pdf.setDrawColor(229, 231, 235);
-              pdf.rect(margin, yPos - 5, 120, 85, "S");
-
-              // Add image with proper dimensions
-              const imgWidth = 110;
-              const aspectRatio = imageData.height / imageData.width;
-              const imgHeight = Math.min(imgWidth * aspectRatio, 75);
-
-              pdf.addImage(
-                imageData.dataURL,
-                "JPEG",
-                margin + 5,
-                yPos,
-                imgWidth,
-                imgHeight
-              );
-
-              // Image caption with improved messaging
-              pdf.setTextColor(107, 114, 128);
-              pdf.setFontSize(8);
-
-              // Check if this is a placeholder image
-              if (
-                imageData.isPlaceholder ||
-                (imageData.width === 300 && imageData.height === 200)
-              ) {
-                pdf.text(
-                  `Image ${i + 1} of ${
-                    report.images.length
-                  } (Image unavailable)`,
-                  margin + 5,
-                  yPos + imgHeight + 10
-                );
-
-                // Add error details in smaller text if available
-                if (imageData.errorMessage) {
-                  pdf.setTextColor(239, 68, 68); // Red for error
-                  pdf.setFontSize(7);
-                  const errorText =
-                    imageData.errorMessage.length > 50
-                      ? imageData.errorMessage.substring(0, 47) + "..."
-                      : imageData.errorMessage;
-                  pdf.text(
-                    `Error: ${errorText}`,
-                    margin + 5,
-                    yPos + imgHeight + 20
-                  );
-                  pdf.setTextColor(107, 114, 128); // Reset color
-                  pdf.setFontSize(8); // Reset font size
-                }
-              } else {
-                pdf.text(
-                  `Image ${i + 1} of ${report.images.length}`,
-                  margin + 5,
-                  yPos + imgHeight + 10
-                );
-              }
-
-              yPos +=
-                imageData.isPlaceholder || imageData.errorMessage ? 105 : 95; // Extra space for error message
-            } catch (error) {
-              console.error(`Error processing image ${i + 1}:`, error);
-
-              // This should not happen now since we return placeholder images
-              // But keeping as ultimate fallback
-              pdf.setTextColor(239, 68, 68); // Red
-              pdf.setFont(undefined, "italic");
-              pdf.text(`Image ${i + 1}: Processing error`, margin, yPos);
-              yPos += 15;
-            }
-          }
-        }
-
-        // Add footer
+        // Add professional footer
         addFooter();
 
-        console.log("📄 About to save PDF...");
-        setLoadingProgress(95);
-        setLoadingMessage("Finalizing PDF download...");
+        setLoadingProgress(90);
+        setLoadingMessage("Finalizing elegant PDF...");
 
-        // Save PDF
+        // Save PDF with professional filename
+        // Update page numbers on all pages
+        const totalPages = pdf.internal.getNumberOfPages();
+        for (let i = 1; i <= totalPages; i++) {
+          pdf.setPage(i);
+
+          // Position for page number (same as footer)
+          const footerY = pageHeight - 30;
+
+          // Clear the placeholder text area first
+          pdf.setFillColor(247, 248, 249); // Same as footer background
+          pdf.rect(pageWidth - margin - 60, footerY + 8, 60, 8, "F");
+
+          // Add correct page number
+          pdf.setTextColor(107, 114, 128); // Gray color
+          pdf.setFontSize(8);
+          pdf.setFont("helvetica", "normal");
+          pdf.text(
+            `Page ${i} of ${totalPages}`,
+            pageWidth - margin,
+            footerY + 12,
+            {
+              align: "right",
+            }
+          );
+        }
+
         const filename = `LankaAlert-Report-${
-          report.title?.replace(/[^a-zA-Z0-9]/g, "_") || report.id || Date.now()
+          report.title?.replace(/[^a-zA-Z0-9]/g, "_").substring(0, 20) ||
+          report.id?.substring(0, 8) ||
+          Date.now()
         }.pdf`;
 
-        console.log("📁 Saving PDF with filename:", filename);
+        pdf.save(filename);
 
-        try {
-          pdf.save(filename);
-          console.log("✅ PDF save() method completed successfully");
-        } catch (saveError) {
-          console.error("❌ Error during PDF save:", saveError);
-          throw new Error(`PDF save failed: ${saveError.message}`);
-        }
-
-        console.log("✅ PDF generated and downloaded successfully");
         setLoadingProgress(100);
-        setLoadingMessage("PDF download complete!");
-      } catch (error) {
-        console.error("Error generating PDF:", error);
+        setLoadingMessage("Elegant PDF download complete!");
 
-        // More specific error messages
-        let errorMessage = "Error generating PDF. ";
-        if (error.message?.includes("Failed to load image")) {
-          errorMessage +=
-            "Some images could not be loaded. This might be due to network issues or image access restrictions.";
-        } else if (error.message?.includes("Canvas")) {
-          errorMessage +=
-            "Image processing failed. The images might be corrupted or in an unsupported format.";
-        } else {
-          errorMessage +=
-            "Please try again or contact support if the issue persists.";
+        // Call success callback if provided
+        if (onSuccess) {
+          onSuccess(
+            `Professional PDF for "${
+              report.title || "Report"
+            }" downloaded successfully!`
+          );
+        }
+      } catch (error) {
+        console.error("Error generating elegant PDF:", error);
+
+        // Call error callback if provided
+        if (onError) {
+          onError("Failed to generate professional PDF. Please try again.");
         }
 
-        alert(errorMessage);
+        alert("Error generating PDF. Please try again.");
       } finally {
         // Reset loading states
         setTimeout(() => {
@@ -821,7 +963,7 @@ const ReportsPDFGenerator = forwardRef(
           setGeneratingReportId(null);
           setLoadingProgress(0);
           setLoadingMessage("");
-        }, 1000); // Show completion message for 1 second
+        }, 1000);
       }
     };
 
@@ -845,21 +987,27 @@ const ReportsPDFGenerator = forwardRef(
         let currentPage = 1;
 
         // Enhanced header function
-        const addHeader = (pageNum, totalPages) => {
+        const addHeader = async (pageNum, totalPages) => {
           // Header background gradient effect
           pdf.setFillColor(59, 130, 246); // Blue-500
           pdf.rect(0, 0, pageWidth, 45, "F");
+
+          // Load and add logo without background
+          const logo = await prepareImageForPDF('/logo.png');
+          const logoHeight = 20;
+          const logoWidth = (logoHeight * logo.width) / logo.height;
+          pdf.addImage(logo.dataURL, 'PNG', margin, 12, logoWidth, logoHeight, '', 'NONE');
 
           // LankaAlert logo/title
           pdf.setTextColor(255, 255, 255);
           pdf.setFontSize(20);
           pdf.setFont(undefined, "bold");
-          pdf.text("LankaAlert", margin, 20);
+          pdf.text("LankaAlert", margin + logoWidth + 5, 20);
 
           // Subtitle
           pdf.setFontSize(12);
           pdf.setFont(undefined, "normal");
-          pdf.text("Comprehensive Disaster Reports", margin, 32);
+          pdf.text("Comprehensive Disaster Reports", margin + logoWidth + 5, 32);
 
           // Page info
           pdf.text(
@@ -917,7 +1065,7 @@ const ReportsPDFGenerator = forwardRef(
         };
 
         // Enhanced title page
-        let yPos = addHeader(1, "?");
+        let yPos = await addHeader(1, "?");
 
         // Title page content with beautiful styling
         pdf.setFillColor(239, 246, 255); // Blue-50
@@ -990,7 +1138,7 @@ const ReportsPDFGenerator = forwardRef(
           // Add new page for each report
           pdf.addPage();
           currentPage++;
-          yPos = addHeader(currentPage, Math.ceil(reports.length * 1.2) + 1);
+          yPos = await addHeader(currentPage, Math.ceil(reports.length * 1.2) + 1);
           yPos += 10;
 
           // Report header with colored background based on severity
@@ -1053,7 +1201,10 @@ const ReportsPDFGenerator = forwardRef(
                 report.longitude || "N/A"
               }`,
             },
-            { label: "Reporter:", value: report.reporterEmail || "N/A" },
+            {
+              label: "Reporter:",
+              value: user?.email || report.reporterEmail || "N/A",
+            },
             {
               label: "Reported:",
               value: report.createdAt?.toDate
@@ -1121,105 +1272,18 @@ const ReportsPDFGenerator = forwardRef(
             yPos += descHeight + 15;
           }
 
-          // Enhanced images section (compact for combined PDF)
-          if (report.images && report.images.length > 0) {
-            pdf.setTextColor(31, 41, 55); // Gray-800
-            pdf.setFontSize(11);
-            pdf.setFont(undefined, "bold");
-            pdf.text(`Images (${report.images.length} attached)`, margin, yPos);
-            yPos += 15;
-
-            // Show first image thumbnail with enhanced loading
-            try {
-              if (report.images[0]) {
-                console.log(
-                  `Processing thumbnail for report ${reportIndex + 1}:`,
-                  report.images[0]
-                );
-
-                // Update progress for image processing
-                setLoadingMessage(
-                  `Processing thumbnail for report ${reportIndex + 1}: ${
-                    report.title || "Untitled"
-                  }`
-                );
-
-                // Use enhanced image preparation
-                const imageData = await prepareImageForPDF(report.images[0]);
-
-                // Image frame with shadow effect
-                pdf.setFillColor(255, 255, 255);
-                pdf.rect(margin, yPos - 2, 60, 45, "F");
-                pdf.setDrawColor(229, 231, 235);
-                pdf.setLineWidth(1);
-                pdf.rect(margin, yPos - 2, 60, 45, "S");
-
-                // Calculate proper dimensions for thumbnail
-                const imgWidth = 50;
-                const maxImgHeight = 35;
-                const aspectRatio = imageData.height / imageData.width;
-                const imgHeight = Math.min(
-                  imgWidth * aspectRatio,
-                  maxImgHeight
-                );
-
-                pdf.addImage(
-                  imageData.dataURL,
-                  "JPEG",
-                  margin + 5,
-                  yPos,
-                  imgWidth,
-                  imgHeight
-                );
-
-                // Image caption with improved messaging
-                pdf.setTextColor(107, 114, 128);
-                pdf.setFontSize(8);
-
-                // Check if this is a placeholder image
-                if (
-                  imageData.isPlaceholder ||
-                  (imageData.width === 300 && imageData.height === 200)
-                ) {
-                  pdf.text(
-                    "Image preview (unavailable)",
-                    margin + 70,
-                    yPos + 10
-                  );
-
-                  // Add brief error indication
-                  if (imageData.errorMessage) {
-                    pdf.setTextColor(239, 68, 68); // Red for error
-                    pdf.setFontSize(7);
-                    pdf.text("Image loading failed", margin + 70, yPos + 20);
-                    pdf.setTextColor(107, 114, 128); // Reset color
-                    pdf.setFontSize(8); // Reset font size
-                  }
-                } else {
-                  pdf.text("First image preview", margin + 70, yPos + 10);
-                }
-
-                if (report.images.length > 1) {
-                  pdf.setFont(undefined, "bold");
-                  pdf.text(
-                    `+${report.images.length - 1} more images`,
-                    margin + 70,
-                    yPos + 20
-                  );
-                }
-                yPos += 50;
-              }
-            } catch (error) {
-              // This should not happen now since we return placeholder images
-              pdf.setTextColor(239, 68, 68); // Red
-              pdf.setFontSize(9);
-              pdf.text(
-                `Images: ${report.images.length} (preview unavailable)`,
-                margin,
-                yPos
-              );
-              yPos += 15;
-            }
+          // Add signature line on the last page only
+          if (reportIndex === reports.length - 1) {
+            // Add signature line
+            const signatureY = pageHeight - 40; // Position above footer
+            pdf.setDrawColor(107, 114, 128); // Gray color
+            pdf.setLineWidth(0.5);
+            pdf.line(margin, signatureY, margin + 150, signatureY);
+            
+            // Add signature label
+            pdf.setTextColor(107, 114, 128);
+            pdf.setFontSize(8);
+            pdf.text('Reporter Signature', margin, signatureY - 5);
           }
 
           // Add footer to each page
@@ -1239,8 +1303,20 @@ const ReportsPDFGenerator = forwardRef(
         console.log(`✅ Combined PDF generated successfully: ${filename}`);
         setLoadingProgress(100);
         setLoadingMessage("Combined PDF download complete!");
+
+        // Call success callback if provided
+        if (onSuccess) {
+          onSuccess(
+            `PDF with ${reports.length} reports downloaded successfully!`
+          );
+        }
       } catch (error) {
         console.error("❌ Error generating combined PDF:", error);
+
+        // Call error callback if provided
+        if (onError) {
+          onError("Failed to generate PDF. Please try again.");
+        }
 
         // More specific error messages
         let errorMessage = "Error generating combined PDF. ";

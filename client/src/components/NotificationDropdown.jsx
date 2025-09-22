@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Bell, X } from "lucide-react";
+import { Bell, X, Trash2 } from "lucide-react";
 import {
   collection,
   query,
@@ -7,6 +7,8 @@ import {
   onSnapshot,
   updateDoc,
   doc,
+  deleteDoc,
+  writeBatch,
 } from "firebase/firestore";
 import { db } from "../services/firebase";
 
@@ -64,6 +66,32 @@ const NotificationDropdown = () => {
       );
     } catch (error) {
       console.error("Error marking all notifications as read:", error);
+    }
+  };
+
+  const deleteNotification = async (notificationId, event) => {
+    // Prevent triggering the mark as read functionality
+    event.stopPropagation();
+
+    try {
+      await deleteDoc(doc(db, "adminNotifications", notificationId));
+    } catch (error) {
+      console.error("Error deleting notification:", error);
+    }
+  };
+
+  const clearAllNotifications = async () => {
+    if (notifications.length === 0) return;
+
+    try {
+      const batch = writeBatch(db);
+      notifications.forEach((notification) => {
+        const notificationRef = doc(db, "adminNotifications", notification.id);
+        batch.delete(notificationRef);
+      });
+      await batch.commit();
+    } catch (error) {
+      console.error("Error clearing all notifications:", error);
     }
   };
 
@@ -177,10 +205,19 @@ const NotificationDropdown = () => {
               Notifications
             </h3>
             <div className="flex items-center space-x-2">
+              {notifications.length > 0 && (
+                <button
+                  onClick={clearAllNotifications}
+                  className="text-sm text-red-600 hover:text-red-800 px-2 py-1 rounded hover:bg-red-50 transition-colors"
+                  title="Clear all notifications"
+                >
+                  Clear All
+                </button>
+              )}
               {unreadCount > 0 && (
                 <button
                   onClick={markAllAsRead}
-                  className="text-sm text-blue-600 hover:text-blue-800"
+                  className="text-sm text-blue-600 hover:text-blue-800 px-2 py-1 rounded hover:bg-blue-50 transition-colors"
                 >
                   Mark all read
                 </button>
@@ -204,13 +241,15 @@ const NotificationDropdown = () => {
               notifications.map((notification) => (
                 <div
                   key={notification.id}
-                  className={`p-4 border-b last:border-b-0 cursor-pointer hover:bg-gray-50 ${
+                  className={`p-4 border-b last:border-b-0 hover:bg-gray-50 ${
                     !notification.read ? "bg-blue-50" : ""
                   }`}
-                  onClick={() => markNotificationAsRead(notification.id)}
                 >
                   <div className="flex items-start justify-between">
-                    <div className="flex-1">
+                    <div
+                      className="flex-1 cursor-pointer"
+                      onClick={() => markNotificationAsRead(notification.id)}
+                    >
                       <p className="text-sm font-medium text-gray-900">
                         {notification.title}
                       </p>
@@ -222,9 +261,18 @@ const NotificationDropdown = () => {
                         {formatNotificationTime(notification.timestamp)}
                       </p>
                     </div>
-                    {!notification.read && (
-                      <div className="h-2 w-2 bg-blue-500 rounded-full ml-2 mt-1"></div>
-                    )}
+                    <div className="flex items-center space-x-2 ml-2">
+                      {!notification.read && (
+                        <div className="h-2 w-2 bg-blue-500 rounded-full"></div>
+                      )}
+                      <button
+                        onClick={(e) => deleteNotification(notification.id, e)}
+                        className="text-gray-400 hover:text-red-600 p-1 rounded hover:bg-red-50 transition-colors"
+                        title="Delete notification"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))

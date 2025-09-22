@@ -144,6 +144,37 @@ export const awardPoints = async (
 };
 
 /**
+ * Deduct points from a reporter (for when reports are deleted)
+ */
+export const deductPoints = async (
+  reporter,
+  pointsToDeduct,
+  reason = "Report deleted"
+) => {
+  try {
+    const negativePoints = -Math.abs(pointsToDeduct); // Ensure negative value
+
+    const rewardDoc = {
+      name: reporter.name,
+      email: reporter.email,
+      points: negativePoints,
+      reason: reason,
+      date: new Date().toISOString(),
+    };
+
+    await addDoc(rewardsCollection, rewardDoc);
+    console.log(
+      `✅ ${Math.abs(negativePoints)} points deducted from ${
+        reporter.email
+      } - ${reason}`
+    );
+  } catch (error) {
+    console.error("❌ Error deducting points:", error);
+    throw error;
+  }
+};
+
+/**
  * Get all rewards for a reporter
  */
 export const getReporterRewards = async (email) => {
