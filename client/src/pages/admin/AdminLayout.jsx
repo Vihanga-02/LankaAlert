@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import React, { useState } from "react";
+import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import {
   BarChart3,
   Users,
@@ -11,9 +11,9 @@ import {
   Menu,
   X,
   LogOut,
-  MapPin
-} from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+  MapPin,
+} from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
 
 const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -22,22 +22,22 @@ const AdminLayout = () => {
   const location = useLocation();
 
   const navigation = [
-    { name: 'Summary', href: '/admin', icon: BarChart3 },
-    { name: 'Role Management', href: '/admin/roles', icon: Users },
-    { name: 'Manage Disaster Alerts', href: '/admin/disasteralerts', icon: AlertTriangle },
-    { name: 'Manage Weather Alerts', href: '/admin/weatheralerts', icon: Bell },
-    { name: 'Map Update', href: '/admin/map', icon: Map },
-    { name: 'Emergency Requests', href: '/admin/emergency', icon: HelpCircle },
-    { name: 'Inventory Management', href: '/admin/inventory', icon: Package },
+    { name: "Summary", href: "/admin", icon: BarChart3 },
+    { name: "Role Management", href: "/admin/roles", icon: Users },
+    { name: "Manage Disaster Alerts", href: "/admin/disasteralerts", icon: AlertTriangle },
+    { name: "Manage Weather Alerts", href: "/admin/weatheralerts", icon: Bell },
+    { name: "Map Update", href: "/admin/map", icon: Map },
+    { name: "Emergency Requests", href: "/admin/emergency", icon: HelpCircle },
+    { name: "Inventory Management", href: "/admin/inventory", icon: Package },
   ];
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate("/login");
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="h-screen bg-gray-50 flex">
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
@@ -50,8 +50,8 @@ const AdminLayout = () => {
 
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg flex flex-col transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        className={`fixed top-0 left-0 z-50 w-64 h-screen bg-white shadow-lg flex flex-col transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         {/* Logo / Header */}
@@ -81,15 +81,15 @@ const AdminLayout = () => {
                 }}
                 className={`group flex items-center w-full px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                   isActive
-                    ? 'bg-blue-100 text-blue-900 border-r-4 border-blue-600'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    ? "bg-blue-100 text-blue-900 border-r-4 border-blue-600"
+                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                 }`}
               >
                 <item.icon
                   className={`mr-3 h-5 w-5 ${
                     isActive
-                      ? 'text-blue-600'
-                      : 'text-gray-400 group-hover:text-gray-500'
+                      ? "text-blue-600"
+                      : "text-gray-400 group-hover:text-gray-500"
                   }`}
                 />
                 {item.name}
@@ -103,12 +103,12 @@ const AdminLayout = () => {
           <div className="flex items-center space-x-3 mb-4">
             <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
               <span className="text-white font-medium text-sm">
-                {user?.name?.charAt(0) || 'A'}
+                {user?.name?.charAt(0) || "A"}
               </span>
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 truncate">
-                {user?.name || 'Admin User'}
+                {user?.name || "Admin User"}
               </p>
               <p className="text-xs text-gray-500 truncate">Administrator</p>
             </div>
@@ -124,7 +124,7 @@ const AdminLayout = () => {
       </div>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
+      <div className="flex-1 flex flex-col lg:ml-64">
         {/* Mobile top bar */}
         <header className="bg-white shadow-sm border-b border-gray-200 lg:hidden">
           <div className="flex items-center justify-between h-16 px-4">
@@ -139,8 +139,8 @@ const AdminLayout = () => {
           </div>
         </header>
 
-        {/* Page content */}
-        <main className="flex-1 overflow-y-auto">
+        {/* Page content - scrollable */}
+        <main className="flex-1 overflow-y-auto p-4">
           <Outlet />
         </main>
       </div>

@@ -9,7 +9,7 @@ import { sendSms } from "../services/smsService.js";
 const DisasterAlertForm = ({
   report,
   onClose,
-  createAlert, // parent passes create or update fn
+  createAlert, // function passed from context
   districts = [],
   districtCities = {},
   zones = [],
@@ -54,6 +54,7 @@ const DisasterAlertForm = ({
     validUntilDate: initValidDate || initStartDate,
     validUntilTime: initValidTime || initStartTime,
     sendSms: report?.sendSms || false,
+     reportId: report?.reportId || null, // ✅ preserve reportId if updating
   });
 
   const [selectedZone, setSelectedZone] = useState(formData.nearestSafeZone);
@@ -97,7 +98,11 @@ Location: ${formData.city || formData.district}
 Description: ${formData.description}
 Start: ${formData.startDate} ${formData.startTime}
 Valid Until: ${formData.validUntilDate} ${formData.validUntilTime}
-${formData.nearestSafeZone ? "Nearest Safe Zone: " + formData.nearestSafeZone.name : ""}`;
+${
+  formData.nearestSafeZone
+    ? `Nearest Safe Zone: ${formData.nearestSafeZone.name} (Lat: ${formData.nearestSafeZone.latitude}, Lng: ${formData.nearestSafeZone.longitude})`
+    : ""
+}`;
 
   // --- Validation ---
   const validateDates = () => {
@@ -114,28 +119,37 @@ ${formData.nearestSafeZone ? "Nearest Safe Zone: " + formData.nearestSafeZone.na
 
   // --- Payload builder ---
   const buildPayload = () => {
-    const start = new Date(`${formData.startDate}T${formData.startTime}`);
-    const validUntil = new Date(`${formData.validUntilDate}T${formData.validUntilTime}`);
+  const validUntil = new Date(`${formData.validUntilDate}T${formData.validUntilTime}`);
 
-    return {
-      disasterName: formData.disasterName,
-      description: formData.description,
-      severity: formData.severity,
-      district: formData.district,
-      city: formData.city,
-      nearestSafeZone: formData.nearestSafeZone || null,
-      startDate: formData.startDate,
-      startTime: formData.startTime,
-      validUntilDate: formData.validUntilDate,
-      validUntilTime: formData.validUntilTime,
-      validUntil: Timestamp.fromDate(validUntil),
-      active: new Date() <= validUntil,
-      sendSms: !!formData.sendSms,
-    };
+  return {
+    disasterName: formData.disasterName,
+    description: formData.description,
+    severity: formData.severity,
+    district: formData.district,
+    city: formData.city,
+    nearestSafeZone: formData.nearestSafeZone
+      ? {
+          id: formData.nearestSafeZone.id,
+          name: formData.nearestSafeZone.name,
+          latitude: formData.nearestSafeZone.latitude,
+          longitude: formData.nearestSafeZone.longitude,
+        }
+      : null,
+    startDate: formData.startDate,
+    startTime: formData.startTime,
+    validUntilDate: formData.validUntilDate,
+    validUntilTime: formData.validUntilTime,
+    validUntil: Timestamp.fromDate(validUntil),
+    active: new Date() <= validUntil,
+    sendSms: !!formData.sendSms,
+    // ✅ ADD THIS
+    reportId: formData.reportId || null,
   };
+};
+
 
   // --- Handlers ---
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setErrors(null);
 
@@ -148,8 +162,13 @@ ${formData.nearestSafeZone ? "Nearest Safe Zone: " + formData.nearestSafeZone.na
     if (formData.sendSms && filteredUsers.length > 0) {
       setShowConfirmPopup(true);
     } else {
-      createAlert(buildPayload());
-      onClose();
+      try {
+        await createAlert(buildPayload());
+      } catch (err) {
+        console.error("Failed to create alert:", err);
+      } finally {
+        onClose();
+      }
     }
   };
 
@@ -168,8 +187,13 @@ ${formData.nearestSafeZone ? "Nearest Safe Zone: " + formData.nearestSafeZone.na
     } catch (err) {
       console.error("SMS sending error:", err);
     } finally {
-      createAlert(buildPayload());
-      onClose();
+      try {
+        await createAlert(buildPayload());
+      } catch (err) {
+        console.error("Failed to create alert:", err);
+      } finally {
+        onClose();
+      }
     }
   };
 
@@ -239,9 +263,7 @@ ${formData.nearestSafeZone ? "Nearest Safe Zone: " + formData.nearestSafeZone.na
               >
                 <option value="">Select District</option>
                 {districts.map((d) => (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
+                  <option key={d} value={d}>{d}</option>
                 ))}
               </select>
             </div>
@@ -256,9 +278,7 @@ ${formData.nearestSafeZone ? "Nearest Safe Zone: " + formData.nearestSafeZone.na
               >
                 <option value="">Select City</option>
                 {(districtCities[formData.district] || []).map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
+                  <option key={c} value={c}>{c}</option>
                 ))}
               </select>
             </div>
@@ -318,13 +338,23 @@ ${formData.nearestSafeZone ? "Nearest Safe Zone: " + formData.nearestSafeZone.na
                 zones={zones}
                 selectedZone={selectedZone}
                 onSelectSafeZone={(zone) => {
-                  setFormData({ ...formData, nearestSafeZone: zone });
+                  setFormData({
+                    ...formData,
+                    nearestSafeZone: {
+                      id: zone.id,
+                      name: zone.name,
+                      latitude: zone.latitude,
+                      longitude: zone.longitude,
+                    },
+                  });
                   setSelectedZone(zone);
                 }}
               />
             </div>
             {formData.nearestSafeZone && (
-              <p className="mt-2 text-sm text-green-600">✅ Selected: {formData.nearestSafeZone.name}</p>
+              <p className="mt-2 text-sm text-green-600">
+                ✅ Selected: {formData.nearestSafeZone.name}
+              </p>
             )}
           </div>
 
@@ -368,13 +398,23 @@ ${formData.nearestSafeZone ? "Nearest Safe Zone: " + formData.nearestSafeZone.na
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-xl max-w-lg w-full shadow-lg">
             <h3 className="text-lg font-bold mb-3">Confirm SMS Sending</h3>
-            <p className="text-sm text-gray-600 mb-4">You are about to send this SMS to {filteredUsers.length} users:</p>
-            <pre className="bg-gray-100 p-3 rounded text-sm whitespace-pre-wrap mb-4">{smsMessage}</pre>
+            <p className="text-sm text-gray-600 mb-4">
+              You are about to send this SMS to {filteredUsers.length} users:
+            </p>
+            <pre className="bg-gray-100 p-3 rounded text-sm whitespace-pre-wrap mb-4">
+              {smsMessage}
+            </pre>
             <div className="flex justify-end space-x-3">
-              <button onClick={() => setShowConfirmPopup(false)} className="px-4 py-2 border rounded-lg hover:bg-gray-100">
+              <button
+                onClick={() => setShowConfirmPopup(false)}
+                className="px-4 py-2 border rounded-lg hover:bg-gray-100"
+              >
                 Cancel
               </button>
-              <button onClick={handleConfirm} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+              <button
+                onClick={handleConfirm}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              >
                 Confirm & Send
               </button>
             </div>

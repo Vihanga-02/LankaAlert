@@ -36,6 +36,10 @@ const MapZoneForm = ({
               setData((p) => ({ ...p, latitude: lat, longitude: lng }))
             }
           />
+           {/* Hidden field to carry reportId */}
+            {data.reportId && (
+              <input type="hidden" name="reportId" value={data.reportId} />
+            )}
 
           <div>
             <label className="block text-sm font-medium mb-1">Name</label>
