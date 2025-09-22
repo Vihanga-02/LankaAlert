@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState } from "react";
 import {
   awardPoints,
+  deductPoints,
   getReporterRewards,
   getTotalPoints,
   calculateReportPoints,
@@ -48,12 +49,29 @@ export const RewardProvider = ({ children }) => {
     setTotalPoints(total);
   };
 
+  // Deduct points from reporter (for deleted reports)
+  const removePoints = async (
+    reporter,
+    pointsToDeduct,
+    reason = "Report deleted"
+  ) => {
+    console.log("🔻 removePoints called with:", {
+      reporter,
+      pointsToDeduct,
+      reason,
+    });
+
+    await deductPoints(reporter, pointsToDeduct, reason);
+    await fetchRewards(reporter.email);
+  };
+
   return (
     <RewardContext.Provider
       value={{
         rewards,
         totalPoints,
         givePoints,
+        removePoints,
         fetchRewards,
       }}
     >

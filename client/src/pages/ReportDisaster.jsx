@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { AlertTriangle, FileText } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { AlertTriangle, FileText, Loader2 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useDisasterReports } from "../context/DisasterReportsContext";
 import { useRewards } from "../context/RewardContext";
@@ -12,10 +12,13 @@ const ReportDisaster = () => {
   const { addReport } = useDisasterReports();
   const { givePoints, totalPoints, fetchRewards } = useRewards();
 
+  // Ref to access form validation
+  const formRef = useRef();
+
   const [formData, setFormData] = useState({
     disasterType: "",
     title: "",
-    severity: "medium",
+    severity: "",
     description: "",
     locationDescription: "",
     latitude: "",
@@ -24,6 +27,24 @@ const ReportDisaster = () => {
   });
 
   const [currentPoints, setCurrentPoints] = useState(0);
+
+  // Toast state
+  const [toast, setToast] = useState({
+    show: false,
+    message: "",
+    type: "success", // success, error
+  });
+
+  // Loading state
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Show toast function
+  const showToast = (message, type = "success") => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast({ show: false, message: "", type: "success" });
+    }, 4000);
+  };
 
   // 🔹 Fetch current user points on mount
   useEffect(() => {
@@ -36,6 +57,20 @@ const ReportDisaster = () => {
   useEffect(() => {
     setCurrentPoints(totalPoints);
   }, [totalPoints]);
+
+  // Prevent scrolling when submitting
+  useEffect(() => {
+    if (isSubmitting) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+
+    // Cleanup function to reset overflow when component unmounts
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isSubmitting]);
 
   // Image upload function
   const uploadDisasterImages = async (images, reportId, userEmail) => {
@@ -146,27 +181,16 @@ const ReportDisaster = () => {
     try {
       console.log("Form Data Submitted:", formData);
 
-      // Validation
-      if (!formData.disasterType || !formData.title || !formData.description) {
-        alert(
-          "Please fill in all required fields (Disaster Type, Title, Description)"
-        );
+      // Use the form's validation instead of basic validation
+      if (!formRef.current?.validateForm()) {
+        console.log("Form validation failed - stopping submission");
         return;
       }
 
-      if (!formData.latitude || !formData.longitude) {
-        alert("Please provide location information");
-        return;
-      }
+      console.log("Form validation passed - proceeding with submission");
 
-      // Show loading state
-      const submitButton = document.querySelector(
-        'button[onClick="handleSubmit"]'
-      );
-      if (submitButton) {
-        submitButton.disabled = true;
-        submitButton.textContent = "Submitting...";
-      }
+      // Set loading state
+      setIsSubmitting(true);
 
       // Generate unique report ID for image storage
       const reportId = generateReportId(user.email);
@@ -215,19 +239,19 @@ const ReportDisaster = () => {
       const imageBonus = formData.images?.length > 0 ? " (+20 for images)" : "";
       const severityBonus =
         formData.severity === "high" ? " (+30 for critical)" : "";
-      alert(
-        `✅ Disaster Report submitted & ${calculatedPoints} points awarded!${imageBonus}${severityBonus}`
+      showToast(
+        `✅ Disaster Report submitted & ${calculatedPoints} points awarded!${imageBonus}${severityBonus}`,
+        "success"
       );
     } catch (err) {
-      alert("❌ Failed to submit report. Check console for details.");
+      showToast(
+        "❌ Failed to submit report. Check console for details.",
+        "error"
+      );
       console.error(err);
     } finally {
-      // Reset button state
-      const submitButton = document.querySelector("button");
-      if (submitButton && submitButton.textContent === "Submitting...") {
-        submitButton.disabled = false;
-        submitButton.textContent = "Submit Report";
-      }
+      // Reset loading state
+      setIsSubmitting(false);
     }
   };
 
@@ -257,6 +281,42 @@ const ReportDisaster = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
+      {/* Toast Notification */}
+      {toast.show && (
+        <div
+          className={`fixed top-4 right-4 z-50 max-w-md p-4 rounded-lg shadow-lg border-l-4 transform transition-all duration-300 ${
+            toast.type === "success"
+              ? "bg-green-50 border-green-400 text-green-800"
+              : "bg-red-50 border-red-400 text-red-800"
+          }`}
+        >
+          <div className="flex items-center">
+            <span
+              className={`w-5 h-5 rounded-full flex items-center justify-center mr-3 ${
+                toast.type === "success" ? "bg-green-500" : "bg-red-500"
+              }`}
+            >
+              <span className="text-white text-sm">
+                {toast.type === "success" ? "✓" : "!"}
+              </span>
+            </span>
+            <p className="font-medium">{toast.message}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Loading Indicator - Centered (No Background) */}
+      {isSubmitting && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+          <div className="bg-white rounded-xl p-6 shadow-xl border border-gray-200 flex items-center space-x-3 pointer-events-auto">
+            <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+            <span className="text-lg font-medium text-gray-900">
+              Submitting Report...
+            </span>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-8">
@@ -298,15 +358,31 @@ const ReportDisaster = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left: Disaster Form */}
           <div className="lg:col-span-2">
-            <DisasterReportForm formData={formData} setFormData={setFormData} />
+            <DisasterReportForm
+              ref={formRef}
+              formData={formData}
+              setFormData={setFormData}
+            />
 
             {/* Submit button outside form */}
             <div className="flex justify-end mt-4">
               <button
                 onClick={handleSubmit}
-                className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700"
+                disabled={isSubmitting}
+                className={`flex items-center gap-3 px-6 py-3 rounded-lg font-semibold transition-all duration-300 transform ${
+                  isSubmitting
+                    ? "bg-gray-400 text-gray-700 cursor-not-allowed"
+                    : "bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg hover:-translate-y-1"
+                }`}
               >
-                Submit Report
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  <>Submit Report</>
+                )}
               </button>
             </div>
           </div>

@@ -32,7 +32,7 @@ import ReportsPDFGenerator from "../components/ReportsPDFGenerator";
 const Profile = () => {
   const { user, logout, updateUser } = useAuth();
   const { getUserReports, editReport, removeReport } = useDisasterReports();
-  const { rewards, totalPoints, fetchRewards } = useRewards();
+  const { rewards, totalPoints, fetchRewards, removePoints } = useRewards();
 
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -49,6 +49,22 @@ const Profile = () => {
   const [editingReportId, setEditingReportId] = useState(null);
   const [editingReportData, setEditingReportData] = useState({});
 
+  // Toast notification state
+  const [toast, setToast] = useState({
+    show: false,
+    message: "",
+    type: "success", // success, error
+  });
+
+  // Confirmation dialog state
+  const [confirmDialog, setConfirmDialog] = useState({
+    show: false,
+    title: "",
+    message: "",
+    onConfirm: null,
+    onCancel: null,
+  });
+
   // Search and filter states
   const [searchTerm, setSearchTerm] = useState("");
   const [severityFilter, setSeverityFilter] = useState("all");
@@ -56,6 +72,46 @@ const Profile = () => {
 
   // PDF Generator ref
   const pdfGeneratorRef = useRef();
+
+  // Toast notification function
+  const showToast = (message, type = "success") => {
+    setToast({
+      show: true,
+      message,
+      type,
+    });
+    setTimeout(() => {
+      setToast({ show: false, message: "", type: "success" });
+    }, 4000);
+  };
+
+  // Confirmation dialog function
+  const showConfirmDialog = (title, message, onConfirm) => {
+    // Prevent body scrolling when dialog opens
+    document.body.style.overflow = "hidden";
+
+    setConfirmDialog({
+      show: true,
+      title,
+      message,
+      onConfirm: () => {
+        // Restore scrolling when action is confirmed
+        document.body.style.overflow = "unset";
+        onConfirm();
+      },
+      onCancel: () => {
+        // Restore scrolling when dialog is cancelled
+        document.body.style.overflow = "unset";
+        setConfirmDialog({
+          show: false,
+          title: "",
+          message: "",
+          onConfirm: null,
+          onCancel: null,
+        });
+      },
+    });
+  };
 
   // Update editForm when user data changes
   useEffect(() => {
@@ -265,7 +321,6 @@ const Profile = () => {
     return `disaster_${userHash}_${timestamp}`;
   };
 
-
   // Delete images from Firebase Storage
   const deleteImagesFromStorage = async (imageUrls) => {
     if (!imageUrls || imageUrls.length === 0) {
@@ -422,20 +477,27 @@ const Profile = () => {
       setUserReports(updatedReports || []);
       setEditingReportId(null);
 
-      alert(
-        "Report updated successfully! Admin has been notified of the changes."
+      showToast(
+        "Report updated successfully! Admin has been notified of the changes.",
+        "success"
       );
     } catch (error) {
       console.error("Error updating report:", error);
-      alert("Failed to update report. Check console for details.");
+      showToast("Failed to update report. Please try again.", "error");
     }
   };
 
   const handleDeleteReport = async (reportId) => {
-    if (window.confirm("Are you sure you want to delete this report?")) {
+    const performDelete = async () => {
       try {
         // Find the report to get its images and data
         const reportToDelete = userReports.find((r) => r.id === reportId);
+
+        // Calculate points that will be lost when deleting this report
+        const pointsToDeduct = calculateReportPoints(
+          reportToDelete,
+          userReports
+        );
 
         // Send notification to admin before deleting
         await NotificationService.notifyAdminReportDeleted(
@@ -459,14 +521,54 @@ const Profile = () => {
 
         // Delete the report from Firestore
         await removeReport(reportId);
+
+        // Update local state to remove the report
         setUserReports((prev) => prev.filter((r) => r.id !== reportId));
 
-        alert("Report deleted successfully! Admin has been notified.");
+        // Deduct points from rewards system using the new removePoints function
+        await removePoints(
+          user,
+          pointsToDeduct,
+          `Report deleted (${
+            reportToDelete.title || "Untitled"
+          }) - ${pointsToDeduct} points deducted`
+        );
+
+        // Close confirmation dialog
+        setConfirmDialog({
+          show: false,
+          title: "",
+          message: "",
+          onConfirm: null,
+          onCancel: null,
+        });
+        // Restore scrolling
+        document.body.style.overflow = "unset";
+
+        showToast(
+          `Report deleted successfully! ${pointsToDeduct} points deducted. Admin has been notified.`,
+          "success"
+        );
       } catch (error) {
         console.error("Error deleting report:", error);
-        alert("Failed to delete report. Check console for details.");
+        setConfirmDialog({
+          show: false,
+          title: "",
+          message: "",
+          onConfirm: null,
+          onCancel: null,
+        });
+        // Restore scrolling on error
+        document.body.style.overflow = "unset";
+        showToast("Failed to delete report. Please try again.", "error");
       }
-    }
+    };
+
+    showConfirmDialog(
+      "Delete Report",
+      "Are you sure you want to delete this report? This action cannot be undone and will deduct the associated points.",
+      performDelete
+    );
   };
 
   if (!user) {
@@ -484,6 +586,65 @@ const Profile = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
+      {/* Toast Notification */}
+      {toast.show && (
+        <div
+          className={`fixed top-4 right-4 z-50 max-w-md p-4 rounded-lg shadow-lg border-l-4 transform transition-all duration-300 ${
+            toast.type === "success"
+              ? "bg-green-50 border-green-400 text-green-800"
+              : "bg-red-50 border-red-400 text-red-800"
+          }`}
+        >
+          <div className="flex items-center">
+            <span
+              className={`w-5 h-5 rounded-full flex items-center justify-center mr-3 ${
+                toast.type === "success" ? "bg-green-500" : "bg-red-500"
+              }`}
+            >
+              <span className="text-white text-sm">
+                {toast.type === "success" ? "✓" : "!"}
+              </span>
+            </span>
+            <p className="font-medium">{toast.message}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Confirmation Dialog */}
+      {confirmDialog.show && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-auto">
+          <div className="bg-white rounded-xl shadow-2xl border-2 border-gray-200 p-6 max-w-md w-full my-auto transform transition-all duration-300">
+            <div className="flex items-center mb-4">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mr-3">
+                <span className="text-red-600 text-xl">⚠️</span>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">
+                {confirmDialog.title}
+              </h3>
+            </div>
+
+            <p className="text-gray-600 mb-6 leading-relaxed">
+              {confirmDialog.message}
+            </p>
+
+            <div className="flex space-x-3 justify-end">
+              <button
+                onClick={confirmDialog.onCancel}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors duration-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDialog.onConfirm}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-8 flex flex-col md:flex-row items-center justify-between">
@@ -795,6 +956,8 @@ const Profile = () => {
                 user={user}
                 calculateReportPoints={calculateReportPoints}
                 className="mb-4"
+                onSuccess={(message) => showToast(message, "success")}
+                onError={(message) => showToast(message, "error")}
               />
 
               {filteredReports.length === 0 ? (
@@ -885,7 +1048,8 @@ const Profile = () => {
                             </div>
                           </td>
                           <td className="px-4 py-2 text-center">
-                            <div className="flex flex-col space-y-1">
+                            <div className="flex items-center justify-center space-x-2">
+                              {/* PDF Download Button */}
                               <button
                                 onClick={() =>
                                   pdfGeneratorRef.current?.downloadIndividualReportPDF(
@@ -897,33 +1061,34 @@ const Profile = () => {
                                   pdfGeneratorRef.current
                                     ?.generatingReportId === report.id
                                 }
-                                className="text-green-600 hover:underline text-sm flex items-center gap-1 justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="bg-green-100 hover:bg-green-200 text-green-700 hover:text-green-800 p-2 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                                 title="Download PDF"
                               >
                                 {pdfGeneratorRef.current?.pdfGenerating &&
                                 pdfGeneratorRef.current?.generatingReportId ===
                                   report.id ? (
-                                  <>
-                                    <div className="animate-spin h-4 w-4 border-2 border-green-600 border-t-transparent rounded-full"></div>
-                                    PDF
-                                  </>
+                                  <div className="animate-spin h-4 w-4 border-2 border-green-600 border-t-transparent rounded-full"></div>
                                 ) : (
-                                  <>
-                                    <Download className="h-4 w-4" /> PDF
-                                  </>
+                                  <Download className="h-4 w-4" />
                                 )}
                               </button>
+
+                              {/* Edit Button */}
                               <button
                                 onClick={() => handleReportEdit(report)}
-                                className="text-blue-600 hover:underline text-sm flex items-center gap-1 justify-center"
+                                className="bg-blue-100 hover:bg-blue-200 text-blue-700 hover:text-blue-800 p-2 rounded-lg transition-colors duration-200"
+                                title="Edit Report"
                               >
-                                <Edit3 className="h-4 w-4" /> Edit
+                                <Edit3 className="h-4 w-4" />
                               </button>
+
+                              {/* Delete Button */}
                               <button
-                                onClick={() => handleReportDelete(report.id)}
-                                className="text-red-600 hover:underline text-sm flex items-center gap-1 justify-center"
+                                onClick={() => handleDeleteReport(report.id)}
+                                className="bg-red-100 hover:bg-red-200 text-red-700 hover:text-red-800 p-2 rounded-lg transition-colors duration-200"
+                                title="Delete Report"
                               >
-                                <Trash2 className="h-4 w-4" /> Delete
+                                <Trash2 className="h-4 w-4" />
                               </button>
                             </div>
                           </td>
