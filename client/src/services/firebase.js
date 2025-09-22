@@ -25,4 +25,4 @@ const storage = getStorage(app);
 // ✅ Force logout when browser closes
 setPersistence(auth, browserSessionPersistence);
 
-export { db, auth, storage, firebaseConfig };
+export {app, db, auth, storage, firebaseConfig };
