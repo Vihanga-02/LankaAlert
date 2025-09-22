@@ -1,3 +1,4 @@
+// src/pages/admin/RoleManagement.jsx
 import React, { useEffect, useState } from "react";
 import {
   Users,
@@ -6,9 +7,15 @@ import {
   CheckCircle,
   XCircle,
   Plus,
+  Trash,
 } from "lucide-react";
 import { initializeApp } from "firebase/app";
-import { getAuth, createUserWithEmailAndPassword, signOut } from "firebase/auth";
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  signOut,
+  deleteUser as firebaseDeleteUser,
+} from "firebase/auth";
 import {
   collection,
   getDocs,
@@ -16,8 +23,19 @@ import {
   doc,
   setDoc,
   serverTimestamp,
+  deleteDoc,
 } from "firebase/firestore";
 import { db, auth, firebaseConfig } from "../../services/firebase";
+
+// Optional: reusable service for delete
+export const deleteUserFromFirestore = async (uid) => {
+  try {
+    await deleteDoc(doc(db, "users", uid));
+    console.log("Deleted user:", uid);
+  } catch (err) {
+    console.error("Error deleting user:", err);
+  }
+};
 
 const RoleManagement = () => {
   const [activeTab, setActiveTab] = useState("users");
@@ -91,18 +109,15 @@ const RoleManagement = () => {
         return;
       }
 
-      // Create a secondary Firebase app instance
       const secondaryApp = initializeApp(firebaseConfig, "Secondary");
       const secondaryAuth = getAuth(secondaryApp);
 
-      // Create the new admin user in secondary auth
       const cred = await createUserWithEmailAndPassword(
         secondaryAuth,
         email,
         password
       );
 
-      // Store admin user in Firestore
       const userData = {
         uid: cred.user.uid,
         name,
@@ -113,7 +128,6 @@ const RoleManagement = () => {
       };
       await setDoc(doc(db, "users", cred.user.uid), userData);
 
-      // Sign out from secondary auth so main session stays intact
       await signOut(secondaryAuth);
 
       setNewAdmin({ name: "", email: "", password: "" });
@@ -122,6 +136,30 @@ const RoleManagement = () => {
     } catch (error) {
       console.error(error);
       setFormError(error.message);
+    }
+  };
+
+  const handleDeleteUser = async (user) => {
+    if (window.confirm(`Are you sure you want to delete ${user.name}?`)) {
+      try {
+        // Delete from Firestore
+        await deleteUserFromFirestore(user.id);
+
+        // Optional: If user is admin in Firebase Auth
+        if (user.uid) {
+          const tempAuth = getAuth();
+          const tempUser = tempAuth.currentUser;
+          if (tempUser && tempUser.uid !== user.uid) {
+            // delete user from Firebase Auth (requires admin SDK for real deletion in production)
+            // firebaseDeleteUser requires the user to be logged in as that account
+            // For now, we delete Firestore data only
+          }
+        }
+
+        fetchUsers();
+      } catch (err) {
+        console.error("Failed to delete user:", err);
+      }
     }
   };
 
@@ -148,7 +186,6 @@ const RoleManagement = () => {
     );
   };
 
-  // Role badge colors for display
   const getRoleBadge = (role) => {
     switch (role) {
       case "admin":
@@ -265,58 +302,64 @@ const RoleManagement = () => {
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
         {/* Pending Approval Section */}
-{activeTab === "pending" && (
-  <div className="p-6 space-y-6 max-h-[600px] overflow-y-auto">
-    {filteredData().length > 0 ? (
-      filteredData().map((applicant) => (
-        <div
-          key={applicant.id}
-          className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition"
-        >
-          <div className="flex justify-between items-start flex-wrap gap-4">
-            <div className="min-w-[220px]">
-              <h3 className="text-lg font-semibold text-gray-900">
-                {applicant.name}
-              </h3>
-              <p className="text-gray-600 truncate max-w-xs">{applicant.email}</p>
-              {applicant.phone && (
-                <p className="text-sm text-gray-500">Phone: {applicant.phone}</p>
-              )}
-              <p className="text-sm text-gray-500">
-                District: {applicant.district || "N/A"}
-              </p>
-              <p className="text-sm text-gray-500">
-                District Office: {applicant.districtOffice || "N/A"}
-              </p>
-              <p className="text-sm text-gray-500">
-                Office ID: {applicant.workId || "N/A"}
-              </p>
-            </div>
-            <div className="flex gap-3 items-center">
-              <button
-                onClick={() => handleApproveReporter(applicant.id)}
-                title="Approve Reporter"
-                className="p-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
-              >
-                <CheckCircle className="w-5 h-5" />
-              </button>
-              <button
-                onClick={() => handleRejectReporter(applicant.id)}
-                title="Reject Reporter"
-                className="p-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
-              >
-                <XCircle className="w-5 h-5" />
-              </button>
-            </div>
+        {activeTab === "pending" && (
+          <div className="p-6 space-y-6 max-h-[600px] overflow-y-auto">
+            {filteredData().length > 0 ? (
+              filteredData().map((applicant) => (
+                <div
+                  key={applicant.id}
+                  className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition"
+                >
+                  <div className="flex justify-between items-start flex-wrap gap-4">
+                    <div className="min-w-[220px]">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        {applicant.name}
+                      </h3>
+                      <p className="text-gray-600 truncate max-w-xs">{applicant.email}</p>
+                      {applicant.phone && (
+                        <p className="text-sm text-gray-500">Phone: {applicant.phone}</p>
+                      )}
+                      <p className="text-sm text-gray-500">
+                        District: {applicant.district || "N/A"}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        District Office: {applicant.districtOffice || "N/A"}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        Office ID: {applicant.workId || "N/A"}
+                      </p>
+                    </div>
+                    <div className="flex gap-3 items-center">
+                      <button
+                        onClick={() => handleApproveReporter(applicant.id)}
+                        title="Approve Reporter"
+                        className="p-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+                      >
+                        <CheckCircle className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => handleRejectReporter(applicant.id)}
+                        title="Reject Reporter"
+                        className="p-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                      >
+                        <XCircle className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteUser(applicant)}
+                        title="Delete User"
+                        className="p-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
+                      >
+                        <Trash className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <NoDataMessage message="No pending reporter requests found." />
+            )}
           </div>
-        </div>
-      ))
-    ) : (
-      <NoDataMessage message="No pending reporter requests found." />
-    )}
-  </div>
-)}
-
+        )}
 
         {/* Users, Reporters, Admins Section */}
         {(activeTab === "users" ||
@@ -337,21 +380,30 @@ const RoleManagement = () => {
                       {user.email}
                     </p>
                   </div>
-                  <span
-                    className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${getRoleBadge(
-                      activeTab === "users"
-                        ? "user"
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${getRoleBadge(
+                        activeTab === "users"
+                          ? "user"
+                          : activeTab === "reporters"
+                          ? "reporter"
+                          : "admin"
+                      )}`}
+                    >
+                      {activeTab === "users"
+                        ? "User"
                         : activeTab === "reporters"
-                        ? "reporter"
-                        : "admin"
-                    )}`}
-                  >
-                    {activeTab === "users"
-                      ? "User"
-                      : activeTab === "reporters"
-                      ? "Reporter"
-                      : "Admin"}
-                  </span>
+                        ? "Reporter"
+                        : "Admin"}
+                    </span>
+                    <button
+                      onClick={() => handleDeleteUser(user)}
+                      title="Delete User"
+                      className="p-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
+                    >
+                      <Trash className="w-5 h-5" />
+                    </button>
+                  </div>
                 </div>
               ))
             ) : (

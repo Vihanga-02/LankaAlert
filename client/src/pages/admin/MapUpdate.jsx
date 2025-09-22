@@ -120,6 +120,7 @@ const MapUpdate = () => {
       ...addData,
       latitude: parseFloat(addData.latitude),
       longitude: parseFloat(addData.longitude),
+       reportId: addData.reportId || null, // ✅ keep link if exists
     });
     setShowAddForm(false);
     setAddData({
@@ -131,6 +132,7 @@ const MapUpdate = () => {
       city: "",
       latitude: "",
       longitude: "",
+      reportId: null, // ✅ reset after save
     });
   };
 
@@ -157,6 +159,7 @@ const MapUpdate = () => {
       ...editData,
       latitude: parseFloat(editData.latitude),
       longitude: parseFloat(editData.longitude),
+      reportId: editData.reportId || null, // ✅ preserve reportId
     });
     setShowEditForm(false);
     setEditId(null);

@@ -1,6 +1,6 @@
 // src/pages/admin/DisasterAlertManagement.jsx
 import React, { useState, useEffect } from "react";
-import { Eye, Edit, AlertTriangle, Plus, Filter, Search } from "lucide-react";
+import { Eye, Edit, AlertTriangle, Plus, Filter, Search, Map } from "lucide-react";
 import { useDisasterReports } from "../../context/DisasterReportsContext";
 import { useDisasterAlert } from "../../context/DisasterAlertContext";
 import { useMapZone } from "../../context/MapZoneContext";
@@ -109,11 +109,12 @@ const dangerSubcategories = [
 
 const DisasterAlertManagement = () => {
   const { reports, fetchReports, loading } = useDisasterReports();
-  const { createAlert } = useDisasterAlert();
+  const { alerts, createAlert } = useDisasterAlert();
   const { zones, fetchZones, addZone } = useMapZone();
 
   const [activeSection, setActiveSection] = useState("reports");
   const [searchTerm, setSearchTerm] = useState("");
+  const [reportFilter, setReportFilter] = useState("all"); // all, created, notCreated, zoneMarked, noZone
 
   // For modals
   const [selectedReport, setSelectedReport] = useState(null);
@@ -125,14 +126,25 @@ const DisasterAlertManagement = () => {
   }, []);
 
   // 🔍 Filtering reports
-  const filteredReports = reports.filter(
-    (report) =>
-      report.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      report.locationDescription
-        ?.toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      report.disasterType?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredReports = reports
+    .filter(
+      (report) =>
+        report.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        report.locationDescription
+          ?.toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        report.disasterType?.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .filter((report) => {
+      const hasAlert = alerts.some((a) => a.reportId === report.id);
+      const hasZone = zones.some((z) => z.reportId === report.id);
+
+      if (reportFilter === "created") return hasAlert;
+      if (reportFilter === "notCreated") return !hasAlert;
+      if (reportFilter === "zoneMarked") return hasZone;
+      if (reportFilter === "noZone") return !hasZone;
+      return true;
+    });
 
   const getSeverityColor = (severity) => {
     switch (severity?.toLowerCase()) {
@@ -165,6 +177,7 @@ const DisasterAlertManagement = () => {
       district: report.district || "",
       city: report.city || "",
       safeDescription: "",
+      reportId: report.id || null, // ✅ link report to zone
     });
   };
 
@@ -176,6 +189,7 @@ const DisasterAlertManagement = () => {
         ...zoneData,
         latitude: parseFloat(zoneData.latitude),
         longitude: parseFloat(zoneData.longitude),
+        reportId: zoneData.reportId || null, // ✅ ensure saved
       });
       setZoneData(null);
     } catch (err) {
@@ -192,8 +206,7 @@ const DisasterAlertManagement = () => {
             Disaster Management Dashboard
           </h1>
           <p className="mt-2 text-gray-600">
-            Monitor disaster reports, create alerts, and mark danger zones on
-            the map
+            Monitor disaster reports, create alerts, and mark danger zones on the map
           </p>
         </div>
         <div className="mt-4 sm:mt-0 flex items-center space-x-4">
@@ -206,8 +219,8 @@ const DisasterAlertManagement = () => {
       </div>
 
       {/* Navigation */}
-      <div className="border-b border-gray-200 mb-6">
-        <nav className="flex space-x-6">
+      <div className="border-b border-gray-200 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+        <nav className="flex space-x-6 mb-4 sm:mb-0">
           <button
             onClick={() => setActiveSection("reports")}
             className={`py-2 px-3 font-medium text-sm border-b-2 ${
@@ -229,6 +242,24 @@ const DisasterAlertManagement = () => {
             Created Alerts
           </button>
         </nav>
+
+        {/* Filter for reports */}
+        {activeSection === "reports" && (
+          <div className="flex items-center space-x-2">
+            <label className="text-gray-600 text-sm">Show:</label>
+            <select
+              value={reportFilter}
+              onChange={(e) => setReportFilter(e.target.value)}
+              className="border rounded-lg px-2 py-1 text-sm"
+            >
+              <option value="all">All Reports</option>
+              <option value="created">Alert Created</option>
+              <option value="notCreated">No Alert</option>
+              <option value="zoneMarked">Zone Marked</option>
+              <option value="noZone">No Zone</option>
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Reports Section */}
@@ -246,9 +277,6 @@ const DisasterAlertManagement = () => {
                 className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            <button className="inline-flex items-center px-4 py-2 border rounded-lg hover:bg-gray-50">
-              <Filter className="h-5 w-5 mr-2 text-gray-400" /> Filter
-            </button>
           </div>
 
           <div className="space-y-6">
@@ -257,87 +285,107 @@ const DisasterAlertManagement = () => {
             ) : filteredReports.length === 0 ? (
               <p>No reports found.</p>
             ) : (
-              filteredReports.map((report) => (
-                <div
-                  key={report.id}
-                  className="bg-white rounded-lg shadow-sm border p-6"
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        {report.title}
-                      </h3>
-                      <p className="text-gray-600">
-                        {report.locationDescription}
+              filteredReports.map((report) => {
+                const hasAlert = alerts.some((a) => a.reportId === report.id);
+                const hasZone = zones.some((z) => z.reportId === report.id);
+                return (
+                  <div
+                    key={report.id}
+                    className="bg-white rounded-lg shadow-sm border p-6"
+                  >
+                    <div className="flex items-start justify-between mb-4">
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900">
+                          {report.title}
+                        </h3>
+                        <p className="text-gray-600">
+                          {report.locationDescription}
+                        </p>
+                      </div>
+                      <span
+                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getSeverityColor(
+                          report.severity
+                        )}`}
+                      >
+                        {report.severity}
+                      </span>
+                    </div>
+
+                    <p className="text-gray-700 mb-2">{report.description}</p>
+                    {hasAlert && (
+                      <p className="text-green-700 font-semibold mb-1">
+                        ✅ Alert Created
                       </p>
-                    </div>
-                    <span
-                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getSeverityColor(
-                        report.severity
-                      )}`}
-                    >
-                      {report.severity}
-                    </span>
-                  </div>
+                    )}
+                    {hasZone && (
+                      <p className="text-blue-700 font-semibold mb-2">
+                        ✅ Zone Marked
+                      </p>
+                    )}
 
-                  <p className="text-gray-700 mb-4">{report.description}</p>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                    <div className="bg-gray-50 p-3 rounded-lg">
-                      <div className="text-sm font-medium text-gray-600">
-                        Reporter
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                      <div className="bg-gray-50 p-3 rounded-lg">
+                        <div className="text-sm font-medium text-gray-600">
+                          Reporter
+                        </div>
+                        <div className="text-lg font-semibold text-gray-600">
+                          {report.reporterEmail}
+                        </div>
                       </div>
-                      <div className="text-lg font-semibold text-gray-600">
-                        {report.reporterEmail}
+                      <div className="bg-gray-50 p-3 rounded-lg">
+                        <div className="text-sm font-medium text-gray-600">
+                          Date
+                        </div>
+                        <div className="text-lg font-semibold text-gray-600">
+                          {report.createdAt?.toDate
+                            ? report.createdAt.toDate().toLocaleString()
+                            : "N/A"}
+                        </div>
+                      </div>
+                      <div className="bg-gray-50 p-3 rounded-lg">
+                        <div className="text-sm font-medium text-gray-600">
+                          Latitude
+                        </div>
+                        <div className="text-lg font-semibold text-gray-600">
+                          {report.latitude || "N/A"}
+                        </div>
+                      </div>
+                      <div className="bg-gray-50 p-3 rounded-lg">
+                        <div className="text-sm font-medium text-gray-600">
+                          Longitude
+                        </div>
+                        <div className="text-lg font-semibold text-gray-600">
+                          {report.longitude || "N/A"}
+                        </div>
                       </div>
                     </div>
-                    <div className="bg-gray-50 p-3 rounded-lg">
-                      <div className="text-sm font-medium text-gray-600">
-                        Date
-                      </div>
-                      <div className="text-lg font-semibold text-gray-600">
-                        {report.createdAt?.toDate
-                          ? report.createdAt.toDate().toLocaleString()
-                          : "N/A"}
-                      </div>
-                    </div>
-                    <div className="bg-gray-50 p-3 rounded-lg">
-                      <div className="text-sm font-medium text-gray-600">
-                        Latitude
-                      </div>
-                      <div className="text-lg font-semibold text-gray-600">
-                        {report.latitude || "N/A"}
-                      </div>
-                    </div>
-                    <div className="bg-gray-50 p-3 rounded-lg">
-                      <div className="text-sm font-medium text-gray-600">
-                        Longitude
-                      </div>
-                      <div className="text-lg font-semibold text-gray-600">
-                        {report.longitude || "N/A"}
-                      </div>
+                    <div className="flex space-x-3">
+                      <button
+                        onClick={() => handleCreateAlert(report)}
+                        disabled={hasAlert}
+                        className={`inline-flex items-center px-3 py-2 rounded-lg ${
+                          hasAlert
+                            ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+                            : "bg-orange-600 text-white hover:bg-orange-700"
+                        }`}
+                      >
+                        <AlertTriangle className="h-4 w-4 mr-2" /> Create Alert
+                      </button>
+                      <button
+                        onClick={() => handleMarkOnMap(report)}
+                        disabled={hasZone}
+                        className={`inline-flex items-center px-3 py-2 rounded-lg ${
+                          hasZone
+                            ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+                            : "bg-blue-600 text-white hover:bg-blue-700"
+                        }`}
+                      >
+                        <Map className="h-4 w-4 mr-2" /> Mark on Map
+                      </button>
                     </div>
                   </div>
-
-                  <div className="flex space-x-3">
-                    <button className="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                      <Eye className="h-4 w-4 mr-2" /> View Details
-                    </button>
-                    <button
-                      onClick={() => handleCreateAlert(report)}
-                      className="inline-flex items-center px-3 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
-                    >
-                      <AlertTriangle className="h-4 w-4 mr-2" /> Create Alert
-                    </button>
-                    <button
-                      onClick={() => handleMarkOnMap(report)}
-                      className="inline-flex items-center px-3 py-2 border rounded-lg hover:bg-gray-50"
-                    >
-                      <Edit className="h-4 w-4 mr-2" /> Mark on Map
-                    </button>
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </>
@@ -360,7 +408,10 @@ const DisasterAlertManagement = () => {
           districts={districts}
           districtCities={districtCities}
           zones={zones.filter((z) => z.category === "safe")}
-          createAlert={createAlert}
+          createAlert={(data) => {
+            const payload = { ...data, reportId: selectedReport?.id || null };
+            return createAlert(payload);
+          }}
         />
       )}
 
