@@ -310,6 +310,7 @@ const CreatedDisasterAlerts = ({ districts, districtCities, zones }) => {
                 <Clock className="h-4 w-4 mr-1" />
                 {active ? "Active" : "Inactive"}
               </p>
+              <br />
 
               {alert.nearestSafeZone && (
                 <p className="text-green-600 text-sm flex items-center">
