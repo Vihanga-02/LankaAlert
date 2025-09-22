@@ -1,0 +1,154 @@
+import React, { createContext, useContext, useState, useEffect } from "react";
+import { fetchWeatherData } from "../services/weatherAlertService"; // import weather service
+import { subscribeThresholds } from "../services/thresholdService"; // import threshold service
+import { addOrUpdateWeatherAlert } from "../services/activeWeatherAlert"; // import function to save alerts to Firestore
+
+const WeatherAlertContext = createContext();
+
+export const useWeatherAlertContext = () => {
+  return useContext(WeatherAlertContext);
+};
+
+export const WeatherAlertProvider = ({ children }) => {
+  const [weatherData, setWeatherData] = useState([]);
+  const [thresholdData, setThresholdData] = useState([]);
+  const [alerts, setAlerts] = useState([]);
+
+  useEffect(() => {
+    // Fetch weather data
+    const fetchWeather = async () => {
+      const data = await fetchWeatherData();
+      setWeatherData(data);
+    };
+
+    fetchWeather();
+
+    // Subscribe to disaster thresholds
+    const unsubscribe = subscribeThresholds(
+      (data) => {
+        setThresholdData(data);
+      },
+      (error) => console.error(error)
+    );
+
+    return () => unsubscribe(); // Clean up subscription
+  }, []);
+
+  // Function to handle different weather alert types and danger levels
+  const getAlertDetails = (type, value, threshold) => {
+    let dangerLevel = "Low Risk";
+    let dangerColor = "bg-yellow-100 text-yellow-800"; // Default color for Low Risk
+
+    if (type === "uv") {
+      const uvDifference = value - threshold;
+      if (uvDifference >= 5) {
+        dangerLevel = "High Risk"; // High risk for values above threshold + 5
+        dangerColor = "bg-red-100 text-red-800"; // Red for High Risk
+      } else if (uvDifference >= 2) {
+        dangerLevel = "Medium Risk"; // Medium risk for values above threshold + 2
+        dangerColor = "bg-orange-100 text-orange-800"; // Orange for Medium Risk
+      }
+    }
+
+    if (type === "wind") {
+      const windDifference = value - threshold;
+      if (windDifference >= 20) {
+        dangerLevel = "High Risk"; // High risk for values above threshold + 20
+        dangerColor = "bg-red-100 text-red-800"; // Red for High Risk
+      } else if (windDifference >= 10) {
+        dangerLevel = "Medium Risk"; // Medium risk for values above threshold + 10
+        dangerColor = "bg-orange-100 text-orange-800"; // Orange for Medium Risk
+      }
+    }
+
+    return { dangerLevel, dangerColor };
+  };
+
+  // Logic to compare weather and threshold data and generate alerts
+  useEffect(() => {
+    if (weatherData.length > 0 && thresholdData.length > 0) {
+      const newAlerts = [];
+
+      weatherData.forEach((weatherDoc) => {
+        const matchingThreshold = thresholdData.find(
+          (threshold) => threshold.cityName === weatherDoc.cityName
+        );
+
+        if (matchingThreshold) {
+          // Flood risk alert
+          const rainfallExceedsThreshold =
+            weatherDoc.cumulative48HourRainfallMm > matchingThreshold.rainfallThresholdMm;
+          if (rainfallExceedsThreshold) {
+            const floodAlertMessage = `Flood Alert: The cumulative rainfall in ${weatherDoc.cityName} has reached ${weatherDoc.cumulative48HourRainfallMm} mm, exceeding the threshold of ${matchingThreshold.rainfallThresholdMm} mm. Please take appropriate precautions.`;
+            const alert = {
+              cityName: weatherDoc.cityName,
+              message: floodAlertMessage,
+              createdAt: new Date().toLocaleString(),
+              type: "Flood",
+              ...getAlertDetails("flood", weatherDoc.cumulative48HourRainfallMm, matchingThreshold.rainfallThresholdMm),
+            };
+            newAlerts.push(alert);
+            addOrUpdateWeatherAlert(alert); // Save or update the alert to Firestore
+          }
+
+          // Wind risk alert
+          const windExceedsThreshold = weatherDoc.windSpeedKmh > matchingThreshold.windThreshold;
+          if (windExceedsThreshold) {
+            const windAlertMessage = `Wind Alert: In ${weatherDoc.cityName}, wind speeds have exceeded the threshold. The wind speed is ${weatherDoc.windSpeedKmh} km/h. Please stay safe.`;
+            const alert = {
+              cityName: weatherDoc.cityName,
+              message: windAlertMessage,
+              createdAt: new Date().toLocaleString(),
+              type: "Wind",
+              ...getAlertDetails("wind", weatherDoc.windSpeedKmh, matchingThreshold.windThreshold),
+            };
+            newAlerts.push(alert);
+            addOrUpdateWeatherAlert(alert); // Save or update the alert to Firestore
+          }
+
+          // Temperature risk alert
+          const temperatureExceedsThreshold =
+            weatherDoc.temperatureC > matchingThreshold.temperatureThreshold;
+          if (temperatureExceedsThreshold) {
+            const temperatureAlertMessage = `Temperature Alert: The temperature in ${weatherDoc.cityName} has exceeded the threshold. The current temperature is ${weatherDoc.temperatureC}°C. Please take precautions against extreme heat.`;
+            const alert = {
+              cityName: weatherDoc.cityName,
+              message: temperatureAlertMessage,
+              createdAt: new Date().toLocaleString(),
+              type: "Temperature",
+              ...getAlertDetails("temperature", weatherDoc.temperatureC, matchingThreshold.temperatureThreshold),
+            };
+            newAlerts.push(alert);
+            addOrUpdateWeatherAlert(alert); // Save or update the alert to Firestore
+          }
+
+          // UV Index alert
+          const uvExceedsThreshold =
+            weatherDoc.uvIndex > matchingThreshold.uvIndexThreshold;
+          if (uvExceedsThreshold) {
+            const uvAlertMessage = `UV Alert: The UV index in ${weatherDoc.cityName} is ${weatherDoc.uvIndex}, which exceeds the safe threshold. Please take precautions to protect your skin.`;
+            const alert = {
+              cityName: weatherDoc.cityName,
+              message: uvAlertMessage,
+              createdAt: new Date().toLocaleString(),
+              type: "UV",
+              ...getAlertDetails("uv", weatherDoc.uvIndex, matchingThreshold.uvIndexThreshold),
+            };
+            newAlerts.push(alert);
+            addOrUpdateWeatherAlert(alert); // Save or update the alert to Firestore
+          }
+        }
+      });
+
+      setAlerts(newAlerts);
+    }
+  }, [weatherData, thresholdData]);
+
+  return (
+    <WeatherAlertContext.Provider value={{ alerts }}>
+      {children}
+    </WeatherAlertContext.Provider>
+  );
+};
+
+export default WeatherAlertContext;

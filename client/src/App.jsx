@@ -10,6 +10,7 @@ import { DisasterReportsProvider } from "./context/DisasterReportsContext";
 import { RewardProvider } from "./context/RewardContext";
 import { DisasterAlertProvider } from "./context/DisasterAlertContext";
 import { GoogleMapsProvider } from "./context/GoogleMapsProvider";
+import { WeatherAlertProvider } from "./context/weatherAlertContext"; 
 
 // Public & User Pages
 import Navbar from "./components/Navbar";
@@ -41,6 +42,7 @@ import NotificationManager from "./pages/admin/NotificationManager";
 
 //weather pages
 import WeatherSearch from "./components/WeatherSearch";
+import WeatherAlert from "./components/weatherAlert"; // Importing WeatherAlert component
 
 // ─────────────────────────────
 // Route Guards
@@ -90,6 +92,7 @@ function App() {
               <RewardProvider>
                 <MapZoneProvider>
                   <GoogleMapsProvider>
+                    <WeatherAlertProvider>
                     <Router>
                       <Routes>
                         {/* Public */}
@@ -139,12 +142,18 @@ function App() {
                            path="/weather-search"
                             element={<UserLayout><WeatherSearch /></UserLayout>} // Add the WeatherSearch component here
                           />
+                          {/* Weather Alert Route (New) */}
+                          <Route
+                          path="/weather-alerts"
+                          element={<WeatherAlert />} // Add the WeatherAlert component here
+                          />
                         </Route>
 
                         {/* Catch-All */}
                         <Route path="*" element={<Navigate to="/" replace />} />
                       </Routes>
                     </Router>
+                    </WeatherAlertProvider>
                   </GoogleMapsProvider>
                 </MapZoneProvider>
               </RewardProvider>
