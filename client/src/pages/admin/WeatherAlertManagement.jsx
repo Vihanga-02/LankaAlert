@@ -1,3 +1,4 @@
+// src/pages/admin/WeatherAlertManagement.jsx
 import React, { useState } from 'react';
 import { 
   Bell, 
@@ -14,40 +15,17 @@ import {
   AlertTriangle
 } from 'lucide-react';
 
+// ✅ add these two imports
+import DisasterThresholds from '../../components/DisasterThresholds';
+import { ThresholdsProvider } from '../../context/ThresholdsContext';
+import WeatherAlert from '../../components/weatherAlert';  // Import the WeatherAlert component
+import { useWeatherAlertContext } from '../../context/weatherAlertContext'; // Import context
+
 const WeatherAlertManagement = () => {
   const [activeTab, setActiveTab] = useState('active');
   const [showCreateModal, setShowCreateModal] = useState(false);
 
-  const activeAlerts = [
-    {
-      id: 1,
-      title: 'Flood Warning - Colombo District',
-      message: 'Heavy rainfall expected. Residents in low-lying areas advised to move to higher ground.',
-      type: 'SMS & Push',
-      recipients: 15420,
-      sent: 15420,
-      delivered: 15200,
-      priority: 'High',
-      status: 'Active',
-      createdBy: 'Admin',
-      createdAt: '2024-01-26 08:30 AM',
-      expiresAt: '2024-01-27 08:30 AM'
-    },
-    {
-      id: 2,
-      title: 'Wind Alert - Galle District',
-      message: 'Strong winds affecting coastal areas. Fishermen advised not to go to sea.',
-      type: 'SMS',
-      recipients: 5680,
-      sent: 5680,
-      delivered: 5598,
-      priority: 'Medium',
-      status: 'Active',
-      createdBy: 'Admin',
-      createdAt: '2024-01-26 06:15 AM',
-      expiresAt: '2024-01-26 18:15 PM'
-    }
-  ];
+  const { alerts, loading } = useWeatherAlertContext(); // Get alerts from context
 
   const scheduledAlerts = [
     {
@@ -89,10 +67,10 @@ const WeatherAlertManagement = () => {
   ];
 
   const tabs = [
-    { id: 'active', name: 'Active Alerts', count: activeAlerts.length },
+    { id: 'active', name: 'Active Alerts', count: alerts.length }, // Dynamic count based on context
     { id: 'scheduled', name: 'Scheduled', count: scheduledAlerts.length },
     { id: 'templates', name: 'Templates', count: templates.length },
-    { id: 'history', name: 'History', count: 156 }
+    { id: 'history', name: 'Threshold Management'}
   ];
 
   const getPriorityColor = (priority) => {
@@ -114,6 +92,10 @@ const WeatherAlertManagement = () => {
     }
   };
 
+  if (loading) {
+    return <div>Loading...</div>; // Loading state while fetching alerts
+  }
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
       {/* Header */}
@@ -130,54 +112,6 @@ const WeatherAlertManagement = () => {
             <Plus className="h-5 w-5 mr-2" />
             Create Alert
           </button>
-        </div>
-      </div>
-
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-          <div className="flex items-center">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <Bell className="h-6 w-6 text-green-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Active Alerts</p>
-              <p className="text-2xl font-semibold text-gray-900">{activeAlerts.length}</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-          <div className="flex items-center">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Send className="h-6 w-6 text-blue-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Messages Sent</p>
-              <p className="text-2xl font-semibold text-gray-900">21,100</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-          <div className="flex items-center">
-            <div className="p-2 bg-orange-100 rounded-lg">
-              <Users className="h-6 w-6 text-orange-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Recipients</p>
-              <p className="text-2xl font-semibold text-gray-900">15,420</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-          <div className="flex items-center">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <CheckCircle className="h-6 w-6 text-purple-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Delivery Rate</p>
-              <p className="text-2xl font-semibold text-gray-900">98.6%</p>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -203,95 +137,11 @@ const WeatherAlertManagement = () => {
         </nav>
       </div>
 
-      {/* Search and Filter */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search alerts..."
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-        </div>
-        <button className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-          <Filter className="h-5 w-5 mr-2 text-gray-400" />
-          Filter
-        </button>
-      </div>
-
       {/* Active Alerts Tab */}
       {activeTab === 'active' && (
         <div className="space-y-6">
-          {activeAlerts.map((alert) => (
-            <div key={alert.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3 mb-2">
-                    <h3 className="text-lg font-semibold text-gray-900">{alert.title}</h3>
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPriorityColor(alert.priority)}`}>
-                      {alert.priority} Priority
-                    </span>
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(alert.status)}`}>
-                      {alert.status}
-                    </span>
-                  </div>
-                  <p className="text-gray-700 mb-3">{alert.message}</p>
-                  <div className="flex items-center space-x-4 text-sm text-gray-500">
-                    <span>Type: {alert.type}</span>
-                    <span>•</span>
-                    <span>Created by: {alert.createdBy}</span>
-                    <span>•</span>
-                    <span>Created: {alert.createdAt}</span>
-                  </div>
-                </div>
-                <div className="flex space-x-2">
-                  <button className="p-2 text-gray-400 hover:text-gray-600">
-                    <Edit className="h-5 w-5" />
-                  </button>
-                  <button className="p-2 text-gray-400 hover:text-red-600">
-                    <Trash2 className="h-5 w-5" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-                <div className="bg-blue-50 p-3 rounded-lg">
-                  <div className="text-sm font-medium text-gray-600">Recipients</div>
-                  <div className="text-lg font-semibold text-blue-600">{alert.recipients.toLocaleString()}</div>
-                </div>
-                <div className="bg-green-50 p-3 rounded-lg">
-                  <div className="text-sm font-medium text-gray-600">Sent</div>
-                  <div className="text-lg font-semibold text-green-600">{alert.sent.toLocaleString()}</div>
-                </div>
-                <div className="bg-purple-50 p-3 rounded-lg">
-                  <div className="text-sm font-medium text-gray-600">Delivered</div>
-                  <div className="text-lg font-semibold text-purple-600">{alert.delivered.toLocaleString()}</div>
-                </div>
-                <div className="bg-orange-50 p-3 rounded-lg">
-                  <div className="text-sm font-medium text-gray-600">Delivery Rate</div>
-                  <div className="text-lg font-semibold text-orange-600">
-                    {((alert.delivered / alert.sent) * 100).toFixed(1)}%
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-gray-500">
-                  Expires: {alert.expiresAt}
-                </div>
-                <div className="flex space-x-3">
-                  <button className="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                    <MessageSquare className="h-4 w-4 mr-2" />
-                    View Details
-                  </button>
-                  <button className="inline-flex items-center px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-                    <Clock className="h-4 w-4 mr-2" />
-                    Extend
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
+          {/* Insert WeatherAlert component here */}
+          <WeatherAlert />  {/* Display Weather Alerts */}
         </div>
       )}
 
@@ -312,13 +162,6 @@ const WeatherAlertManagement = () => {
                     </span>
                   </div>
                   <p className="text-gray-700 mb-3">{alert.message}</p>
-                  <div className="flex items-center space-x-4 text-sm text-gray-500">
-                    <span>Type: {alert.type}</span>
-                    <span>•</span>
-                    <span>Recipients: {alert.recipients.toLocaleString()}</span>
-                    <span>•</span>
-                    <span>Scheduled for: {alert.scheduledFor}</span>
-                  </div>
                 </div>
                 <div className="flex space-x-2">
                   <button className="p-2 text-gray-400 hover:text-gray-600">
@@ -366,14 +209,13 @@ const WeatherAlertManagement = () => {
         </div>
       )}
 
-      {/* History Tab */}
+      {/* Threshold Management Tab (was "History") */}
       {activeTab === 'history' && (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="text-center py-12">
-            <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Alert History</h3>
-            <p className="text-gray-600">Historical alert data and analytics will be displayed here</p>
-          </div>
+          {/* ✅ Mount the provider locally so the tab works without touching App.jsx */}
+          <ThresholdsProvider>
+            <DisasterThresholds />
+          </ThresholdsProvider>
         </div>
       )}
     </div>
