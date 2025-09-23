@@ -25,6 +25,7 @@ import Register from "./pages/Register";
 import Profile from "./pages/Profile";
 import ReportDisaster from "./pages/ReportDisaster";
 import EmergencyConfirmation from "./pages/EmergencyConfirmation";
+import PreviousRequests from "./pages/PreviousRequests";
 
 // Admin Pages
 import AdminLayout from "./pages/admin/AdminLayout";
@@ -122,6 +123,7 @@ function App() {
                           <Route path="/risk-route" element={<RiskRoute />} />
                           <Route path="/emergency-help" element={<EmergencyHelp />} />
                           <Route path="/confirmation" element={<EmergencyConfirmation />} />
+                          <Route path="/previous-requests" element={<PrivateRoute><PreviousRequests /></PrivateRoute>} />
                           <Route
                             path="/profile"
                             element={<PrivateRoute><Profile /></PrivateRoute>}

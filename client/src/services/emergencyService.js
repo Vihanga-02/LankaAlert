@@ -15,13 +15,15 @@ import {
 /**
  * Save emergency request data into Firestore
  * @param {Object} emergencyData - The emergency form data
+ * @param {string|null} userId - The logged-in user ID
  * @returns {Promise<string>} - Returns the document ID of created request
  */
-export const createEmergencyRequest = async (emergencyData) => {
+export const createEmergencyRequest = async (emergencyData, userId = null) => {
   try {
     const docRef = await addDoc(collection(db, "emergencyRequests"), {
       ...emergencyData,
-      status: "pending", // default status
+      userId: userId || null,   // ✅ Save userId
+      status: "pending",        // default status
       createdAt: Timestamp.now(),
     });
     return docRef.id;
