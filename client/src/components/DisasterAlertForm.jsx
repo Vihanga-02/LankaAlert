@@ -15,32 +15,62 @@ const DisasterAlertForm = ({
   zones = [],
 }) => {
   // --- Helpers ---
-  const timeNowHHMM = () => new Date().toTimeString().slice(0, 5);
-  const dateNowYYYYMMDD = () => new Date().toISOString().slice(0, 10);
+// ✅ Get current date in Sri Lanka timezone (YYYY-MM-DD)
+// Get Sri Lanka date (YYYY-MM-DD)
+// Format YYYY-MM-DD in SL time without UTC conversion
+const getSLDate = () => {
+  const now = new Date();
+  const offset = (5.5 * 60 + now.getTimezoneOffset()) * 60000;
+  const local = new Date(now.getTime() + offset);
+  const year = local.getFullYear();
+  const month = String(local.getMonth() + 1).padStart(2, "0");
+  const day = String(local.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
 
-  const getValidUntilParts = (r) => {
-    if (!r) return { validUntilDate: "", validUntilTime: "" };
-    if (r.validUntil && typeof r.validUntil.toDate === "function") {
-      const d = r.validUntil.toDate();
-      return {
-        validUntilDate: d.toISOString().slice(0, 10),
-        validUntilTime: d.toTimeString().slice(0, 5),
-      };
-    }
-    if (r.validUntilDate && r.validUntilTime) {
-      return { validUntilDate: r.validUntilDate, validUntilTime: r.validUntilTime };
-    }
-    return { validUntilDate: "", validUntilTime: "" };
-  };
+const getSLTime = () => {
+  const now = new Date();
+  const offset = (5.5 * 60 + now.getTimezoneOffset()) * 60000;
+  const local = new Date(now.getTime() + offset);
+  const hours = String(local.getHours()).padStart(2, "0");
+  const minutes = String(local.getMinutes()).padStart(2, "0");
+  return `${hours}:${minutes}`;
+};
 
-  const getStartParts = (r) => ({
-    startDate: r?.startDate || dateNowYYYYMMDD(),
-    startTime: r?.startTime || timeNowHHMM(),
-  });
 
-  // --- Init state ---
-  const { validUntilDate: initValidDate, validUntilTime: initValidTime } = getValidUntilParts(report);
-  const { startDate: initStartDate, startTime: initStartTime } = getStartParts(report);
+
+// ✅ Extract validUntil date/time (from Firestore or plain object)
+const getValidUntilParts = (r) => {
+  if (!r) return { validUntilDate: "", validUntilTime: "" };
+
+  if (r.validUntil && typeof r.validUntil.toDate === "function") {
+    const d = r.validUntil.toDate();
+    return {
+      validUntilDate: d.toISOString().split("T")[0],
+      validUntilTime: d.toTimeString().slice(0, 5),
+    };
+  }
+
+  if (r.validUntilDate && r.validUntilTime) {
+    return {
+      validUntilDate: r.validUntilDate,
+      validUntilTime: r.validUntilTime,
+    };
+  }
+
+  return { validUntilDate: "", validUntilTime: "" };
+};
+
+// ✅ Extract start date/time (fallback to current Sri Lanka date/time)
+const getStartParts = (r) => ({
+  startDate: r?.startDate || getSLDate(),
+  startTime: r?.startTime || getSLTime(),
+});
+
+// --- Init state ---
+const { validUntilDate: initValidDate, validUntilTime: initValidTime } = getValidUntilParts(report);
+const { startDate: initStartDate, startTime: initStartTime } = getStartParts(report);
+
 
   const [formData, setFormData] = useState({
     disasterName: report?.disasterName || "",
@@ -297,76 +327,91 @@ const validateDates = () => {
             </div>
           </div>
 
-              {/* Start Date + Start Time */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium">Start Date</label>
-                  <input
-                    type="date"
-                    value={formData.startDate}
-                    max={dateNowYYYYMMDD()} // 🚫 disallow future date
-                    onChange={(e) =>
-                      setFormData({ ...formData, startDate: e.target.value })
-                    }
-                    className="w-full border rounded-lg p-2 mt-1"
-                    required
-                  />
-                </div>
+          {/* Start Date + Start Time */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium">Start Date</label>
+              <input
+                type="date"
+                value={formData.startDate}
+                max={getSLDate()} // 🚫 cannot select a future date
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    startDate: e.target.value,
+                    startTime:
+                      e.target.value === getSLDate() &&
+                      formData.startTime > getSLTime()
+                        ? getSLTime()
+                        : formData.startTime,
+                  })
+                }
+                className="w-full border rounded-lg p-2 mt-1"
+                required
+              />
+            </div>
 
-                <div>
-                  <label className="block text-sm font-medium">Start Time</label>
-                  <input
-                    type="time"
-                    value={formData.startTime}
-                    max={
-                      formData.startDate === dateNowYYYYMMDD()
-                        ? timeNowHHMM() // 🚫 disallow future time if today
-                        : undefined
-                    }
-                    onChange={(e) =>
-                      setFormData({ ...formData, startTime: e.target.value })
-                    }
-                    className="w-full border rounded-lg p-2 mt-1"
-                    required
-                  />
-                </div>
-              </div>
+            <div>
+              <label className="block text-sm font-medium">Start Time</label>
+              <input
+                type="time"
+                value={formData.startTime}
+                max={
+                  formData.startDate === getSLDate()
+                    ? getSLTime() // 🚫 disallow future time if today
+                    : undefined
+                }
+                onChange={(e) =>
+                  setFormData({ ...formData, startTime: e.target.value })
+                }
+                className="w-full border rounded-lg p-2 mt-1"
+                required
+              />
+            </div>
+          </div>
 
-              {/* Valid Until Date + Time */}
-              <div className="grid grid-cols-2 gap-4 mt-4">
-                <div>
-                  <label className="block text-sm font-medium">Valid Until Date</label>
-                  <input
-                    type="date"
-                    value={formData.validUntilDate}
-                    min={dateNowYYYYMMDD()} // 🚫 disallow past dates
-                    onChange={(e) =>
-                      setFormData({ ...formData, validUntilDate: e.target.value })
-                    }
-                    className="w-full border rounded-lg p-2 mt-1"
-                    required
-                  />
-                </div>
+          {/* Valid Until Date + Time */}
+          <div className="grid grid-cols-2 gap-4 mt-4">
+            <div>
+              <label className="block text-sm font-medium">Valid Until Date</label>
+              <input
+                type="date"
+                value={formData.validUntilDate}
+                min={getSLDate()} // 🚫 cannot be in the past
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    validUntilDate: e.target.value,
+                    validUntilTime:
+                      e.target.value === getSLDate() &&
+                      formData.validUntilTime < getSLTime()
+                        ? getSLTime()
+                        : formData.validUntilTime,
+                  })
+                }
+                className="w-full border rounded-lg p-2 mt-1"
+                required
+              />
+            </div>
 
-                <div>
-                  <label className="block text-sm font-medium">Valid Until Time</label>
-                  <input
-                    type="time"
-                    value={formData.validUntilTime}
-                    min={
-                      formData.validUntilDate === dateNowYYYYMMDD()
-                        ? timeNowHHMM() // 🚫 disallow past time if today
-                        : undefined
-                    }
-                    onChange={(e) =>
-                      setFormData({ ...formData, validUntilTime: e.target.value })
-                    }
-                    className="w-full border rounded-lg p-2 mt-1"
-                    required
-                  />
-                </div>
-              </div>
-
+            <div>
+              <label className="block text-sm font-medium">Valid Until Time</label>
+              <input
+                type="time"
+                value={formData.validUntilTime}
+                min={
+                  formData.validUntilDate === getSLDate()
+                    ? getSLTime() // 🚫 must be future time if today
+                    : undefined
+                }
+                onChange={(e) =>
+                  setFormData({ ...formData, validUntilTime: e.target.value })
+                }
+                className="w-full border rounded-lg p-2 mt-1"
+                required
+              />
+            </div>
+          </div>
           {/* Safe Zone */}
           <div>
             <label className="block text-sm font-medium">Nearest Safe Zone (optional)</label>
