@@ -3,7 +3,17 @@ import React, { useState, useEffect, useMemo } from "react";
 import MapMarking from "../../components/MapMarking";
 import MapZoneForm from "../../components/MapZoneForm";
 import { useMapZone } from "../../context/MapZoneContext";
-import { Layers, RefreshCw, Plus, Pencil, Trash2, Filter } from "lucide-react";
+import {
+  Layers,
+  RefreshCw,
+  Plus,
+  Pencil,
+  Trash2,
+  Filter,
+  FileDown,
+} from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 // -------- Constants --------
 const districts = [
@@ -113,6 +123,105 @@ const MapUpdate = () => {
     });
   }, [zones, activeCategory, activeSubCategory, districtFilter, cityFilter, searchText]);
 
+  // ---- Generate PDF with filters applied ----
+const generatePDF = () => {
+  const doc = new jsPDF("landscape", "pt", "a4");
+
+  // Load logo from public folder
+  const logoUrl = `${window.location.origin}/logo.png`;
+  const img = new Image();
+  img.src = logoUrl;
+
+  img.onload = () => {
+    // ---- Header ----
+    doc.addImage(img, "PNG", 40, 20, 40, 40);
+    doc.setFontSize(24);
+    doc.setTextColor(30, 30, 30);
+    doc.text("Lanka Alert", 90, 45);
+
+    doc.setFontSize(14);
+    doc.setTextColor(50, 50, 50);
+    doc.text("Sri Lanka Map Zones Report", 90, 65);
+
+    // Report metadata
+    const reportDate = new Date().toLocaleString();
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Report Generated: ${reportDate}`, 90, 80);
+    doc.text(`System Admin: Vihanga Edirisinghe`, 400, 80);
+
+    // ---- Table Data ----
+    const tableData = filteredZones.map((zone, index) => {
+      return [
+        index + 1,
+        zone.name || "N/A",
+        zone.category === "danger" ? "Danger" : "Safe",
+        zone.category === "danger" ? zone.subCategory || "-" : zone.safeDescription || "-",
+        `${zone.district || "N/A"} - ${zone.city || "N/A"}`,
+        typeof zone.latitude === "number" ? zone.latitude.toFixed(6) : zone.latitude || "N/A",
+        typeof zone.longitude === "number" ? zone.longitude.toFixed(6) : zone.longitude || "N/A",
+      ];
+    });
+
+    // ---- Table Options ----
+    autoTable(doc, {
+      startY: 100,
+      head: [["#", "Name", "Category", "Type/Description", "Location", "Latitude", "Longitude"]],
+      body: tableData,
+      theme: "grid",
+      styles: {
+        fontSize: 9,
+        cellPadding: 4,
+        overflow: "linebreak",
+        valign: "middle",
+      },
+      headStyles: {
+        fillColor: [0, 123, 255],
+        textColor: 255,
+        fontStyle: "bold",
+        halign: "center",
+      },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
+      columnStyles: {
+        3: { cellWidth: 200 }, // Type/Description wider
+        4: { cellWidth: 150 }, // Location
+      },
+      margin: { top: 100, left: 40, right: 40 },
+    });
+
+    // ---- Footer with Page Numbers ----
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(10);
+      doc.setTextColor(150);
+      doc.text(
+        `Page ${i} of ${pageCount}`,
+        doc.internal.pageSize.getWidth() - 60,
+        doc.internal.pageSize.getHeight() - 10
+      );
+    }
+
+    // ---- Signature line ----
+    doc.setFontSize(12);
+    doc.setTextColor(30, 30, 30);
+    const lastPage = doc.internal.getNumberOfPages();
+    doc.setPage(lastPage);
+    const y = doc.internal.pageSize.getHeight() - 60;
+    doc.text("Verified by:", 40, y);
+    doc.line(110, y + 2, 300, y + 2);
+    doc.text("Vihanga Edirisinghe", 40, y + 15);
+
+    // Save PDF
+    doc.save("LankaAlert_MapZones_Report.pdf");
+  };
+
+  img.onerror = () => {
+    console.error("Failed to load logo for PDF");
+  };
+};
+
+
   // Add submit
   const handleAddSubmit = async (e) => {
     e.preventDefault();
@@ -120,7 +229,7 @@ const MapUpdate = () => {
       ...addData,
       latitude: parseFloat(addData.latitude),
       longitude: parseFloat(addData.longitude),
-       reportId: addData.reportId || null, // ✅ keep link if exists
+      reportId: addData.reportId || null,
     });
     setShowAddForm(false);
     setAddData({
@@ -132,7 +241,7 @@ const MapUpdate = () => {
       city: "",
       latitude: "",
       longitude: "",
-      reportId: null, // ✅ reset after save
+      reportId: null,
     });
   };
 
@@ -159,7 +268,7 @@ const MapUpdate = () => {
       ...editData,
       latitude: parseFloat(editData.latitude),
       longitude: parseFloat(editData.longitude),
-      reportId: editData.reportId || null, // ✅ preserve reportId
+      reportId: editData.reportId || null,
     });
     setShowEditForm(false);
     setEditId(null);
@@ -295,6 +404,16 @@ const MapUpdate = () => {
                 />
               </div>
             </div>
+
+            {/* --- PDF Generate Button --- */}
+            <div className="mt-4">
+              <button
+                onClick={generatePDF}
+                className="w-full inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              >
+                <FileDown className="h-5 w-5 mr-2" /> Generate PDF
+              </button>
+            </div>
           </div>
         </div>
 
@@ -308,7 +427,6 @@ const MapUpdate = () => {
             {loading ? (
               <div className="h-96 flex items-center justify-center">Loading zones...</div>
             ) : (
-              // Do NOT pass onDelete to keep InfoWindow read-only
               <MapMarking lat={null} lng={null} zones={filteredZones} />
             )}
           </div>

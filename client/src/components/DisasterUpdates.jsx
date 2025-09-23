@@ -1,9 +1,11 @@
 // src/components/DisasterUpdates.jsx
 import React, { useState, useEffect } from "react";
-import { AlertTriangle, Calendar, MapPin, Filter } from "lucide-react";
+import { AlertTriangle, Calendar, MapPin, Filter, FileDown } from "lucide-react";
 import MapView from "./MapView";
 import { useMapZone } from "../context/MapZoneContext";
 import { getDisasterAlerts } from "../services/disasterAlertService";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const DisasterUpdates = () => {
   const [filters, setFilters] = useState({
@@ -73,7 +75,9 @@ const DisasterUpdates = () => {
         (filters.status === "active" && isActive) ||
         (filters.status === "expired" && !isActive);
 
-      return dateMatch && placeMatch && severityMatch && typeMatch && statusMatch;
+      return (
+        dateMatch && placeMatch && severityMatch && typeMatch && statusMatch
+      );
     });
   };
 
@@ -112,10 +116,159 @@ const DisasterUpdates = () => {
   };
 
   const getStatusColor = (active) => {
-    return active
-      ? "text-green-700 bg-green-50"
-      : "text-gray-700 bg-gray-50";
+    return active ? "text-green-700 bg-green-50" : "text-gray-700 bg-gray-50";
   };
+
+ // ---- Generate PDF with filters applied ----
+const generatePDF = () => {
+  const doc = new jsPDF("landscape", "pt", "a4");
+
+  // Logo
+  const logoUrl = `${window.location.origin}/logo.png`;
+  const img = new Image();
+  img.src = logoUrl;
+
+  img.onload = () => {
+    // ---- Header ----
+    doc.addImage(img, "PNG", 40, 20, 45, 45);
+    doc.setFontSize(24);
+    doc.setTextColor(30, 30, 30);
+    doc.text("Lanka Alert", 100, 45);
+
+    doc.setFontSize(14);
+    doc.setTextColor(80, 80, 80);
+    doc.text("Disaster Alerts Report", 100, 65);
+
+    // Metadata
+    const reportDate = new Date().toLocaleString();
+    doc.setFontSize(10);
+    doc.setTextColor(120, 120, 120);
+    doc.text(`Generated: ${reportDate}`, 100, 80);
+
+    // ---- Table Data ----
+    const now = new Date();
+    const tableData = filteredDisasterAlerts.map((alert, index) => {
+      const start = `${alert.startDate || "N/A"} ${alert.startTime || ""}`;
+      const validUntil = `${alert.validUntilDate || "N/A"} ${
+        alert.validUntilTime || ""
+      }`;
+      const isActive =
+        now >= new Date(`${alert.startDate}T${alert.startTime}`) &&
+        now <= new Date(`${alert.validUntilDate}T${alert.validUntilTime}`);
+
+      return {
+        index: index + 1,
+        name: alert.disasterName || "N/A",
+        description: alert.description || "N/A",
+        location: `${alert.district || "N/A"} - ${alert.city || "N/A"}`,
+        start,
+        validUntil,
+        severity: alert.severity?.toUpperCase() || "N/A",
+        status: isActive ? "Active" : "Expired",
+      };
+    });
+
+    // ---- Table ----
+    autoTable(doc, {
+      startY: 110,
+      head: [
+        [
+          "#",
+          "Name",
+          "Description",
+          "Location",
+          "Start",
+          "Valid Until",
+          "Severity",
+          "Status",
+        ],
+      ],
+      body: tableData.map((row) => [
+        row.index,
+        row.name,
+        row.description,
+        row.location,
+        row.start,
+        row.validUntil,
+        row.severity,
+        row.status,
+      ]),
+      theme: "grid",
+      styles: {
+        fontSize: 9,
+        cellPadding: 5,
+        overflow: "linebreak",
+        valign: "middle",
+      },
+      headStyles: {
+        fillColor: [30, 64, 175], // deep blue
+        textColor: 255,
+        fontStyle: "bold",
+        halign: "center",
+      },
+      alternateRowStyles: { fillColor: [245, 247, 250] },
+      columnStyles: {
+        2: { cellWidth: 200 }, // Description
+        3: { cellWidth: 120 }, // Location
+        4: { cellWidth: 80 }, // Start
+        5: { cellWidth: 80 }, // Valid Until
+      },
+      margin: { top: 100, left: 40, right: 40 },
+
+      // ---- Custom Coloring ----
+      didParseCell: function (data) {
+        if (data.section === "body") {
+          // Severity column (6th index)
+          if (data.column.index === 6) {
+            const val = data.cell.raw?.toLowerCase();
+            if (val === "low") {
+              data.cell.styles.textColor = [34, 139, 34]; // green
+            } else if (val === "medium") {
+              data.cell.styles.textColor = [255, 140, 0]; // orange
+            } else if (val === "high" || val === "critical") {
+              data.cell.styles.textColor = [220, 20, 60]; // red
+            }
+          }
+
+          // Status column (7th index)
+          if (data.column.index === 7) {
+            const val = data.cell.raw?.toLowerCase();
+            if (val === "active") {
+              data.cell.styles.textColor = [0, 128, 0]; // green
+              data.cell.styles.fontStyle = "bold";
+            } else if (val === "expired" || val === "inactive") {
+              data.cell.styles.textColor = [128, 128, 128]; // gray
+            }
+          }
+        }
+      },
+    });
+
+    // ---- Footer ----
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(10);
+      doc.setTextColor(150);
+      doc.text(
+        `Page ${i} of ${pageCount}`,
+        doc.internal.pageSize.getWidth() - 60,
+        doc.internal.pageSize.getHeight() - 20
+      );
+
+      // Small tagline
+      doc.text(
+        "Generated by Lanka Alert System",
+        40,
+        doc.internal.pageSize.getHeight() - 20
+      );
+    }
+
+    // Save
+    doc.save("LankaAlert_DisasterAlerts_Report.pdf");
+  };
+};
+
 
   if (loading || loadingAlerts) {
     return (
@@ -129,7 +282,7 @@ const DisasterUpdates = () => {
   return (
     <>
       {/* Filters */}
-      <div className="bg-white p-4 rounded-xl shadow mb-6">
+      <div className="bg-white p-4 rounded-xl shadow mb-6 flex flex-col gap-4">
         <div className="flex flex-wrap gap-4 items-center">
           <div className="flex items-center text-gray-600 font-medium">
             <Filter className="w-5 h-5 mr-2" /> Filters:
@@ -175,15 +328,24 @@ const DisasterUpdates = () => {
 
           <select
             value={filters.status}
-            onChange={(e) =>
-              setFilters({ ...filters, status: e.target.value })
-            }
+            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
             className="px-3 py-2 border rounded-lg focus:ring focus:ring-blue-200"
           >
             <option value="active">Active Only</option>
             <option value="all">All</option>
             <option value="expired">Expired Only</option>
           </select>
+        </div>
+
+        {/* PDF Button */}
+        <div className="flex justify-end">
+          <button
+            onClick={generatePDF}
+            className="flex items-center gap-2 bg-teal-600 text-white px-4 py-2 rounded-lg shadow hover:bg-teal-700 transition"
+          >
+            <FileDown className="w-5 h-5" />
+            Generate PDF
+          </button>
         </div>
       </div>
 
@@ -274,9 +436,6 @@ const DisasterUpdates = () => {
                 <span className="text-sm text-gray-500">
                   Valid until: {validUntil}
                 </span>
-                <button className="text-blue-600 hover:text-blue-800 font-medium text-sm">
-                  View Details →
-                </button>
               </div>
             </div>
           );
