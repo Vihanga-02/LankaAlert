@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Bell, BellRing } from "lucide-react";
 import WeatherUpdates from "../components/WeatherUpdates";
+import WeatherAlert from "../components/weatherAlert";
 import DisasterUpdates from "../components/DisasterUpdates";
 
 const Alerts = () => {
@@ -62,7 +63,7 @@ const Alerts = () => {
         </div>
 
         {/* Tab Content */}
-        {activeTab === "weather" ? <WeatherUpdates /> : <DisasterUpdates />}
+        {activeTab === "weather" ? <WeatherAlert /> : <DisasterUpdates />}
       </div>
     </div>
   );
