@@ -9,12 +9,12 @@ const containerStyle = {
 // ✅ Custom icons for danger categories
 const dangerIcons = {
   Floods: {
-    url: "/flood.png",
+    url: "/floodNew.png",
     scaledSize: { w: 40, h: 40 },
     anchor: { x: 20, y: 40 },
   },
   "Landslides": {
-    url: "/landslide.png",
+    url: "/landslideNew.png",
     scaledSize: { w: 40, h: 40 },
     anchor: { x: 20, y: 40 },
   },
