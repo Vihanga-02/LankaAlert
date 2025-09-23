@@ -104,18 +104,31 @@ ${
     : ""
 }`;
 
-  // --- Validation ---
-  const validateDates = () => {
-    try {
-      const start = new Date(`${formData.startDate}T${formData.startTime}`);
-      const validUntil = new Date(`${formData.validUntilDate}T${formData.validUntilTime}`);
-      if (isNaN(start) || isNaN(validUntil)) return "Invalid start or end date/time.";
-      if (validUntil < start) return "Valid until must be after start.";
-      return null;
-    } catch {
-      return "Invalid date/time format.";
-    }
-  };
+// --- Validation ---
+const validateDates = () => {
+  try {
+    const now = new Date();
+    const start = new Date(`${formData.startDate}T${formData.startTime}`);
+    const validUntil = new Date(`${formData.validUntilDate}T${formData.validUntilTime}`);
+
+    if (isNaN(start) || isNaN(validUntil)) return "Invalid start or end date/time.";
+
+    // 1. Start can't be in the future (date + time)
+    if (start > now) return "Start date/time cannot be in the future.";
+
+    // 2. Valid until can't be in the past (date + time)
+    if (validUntil < now) return "Valid until date/time cannot be in the past.";
+
+    // 3. Valid until must be strictly after start
+    if (validUntil <= start) return "Valid until must be after start date/time.";
+
+    return null;
+  } catch {
+    return "Invalid date/time format.";
+  }
+};
+
+
 
   // --- Payload builder ---
   const buildPayload = () => {
@@ -284,51 +297,75 @@ ${
             </div>
           </div>
 
-          {/* Start / Valid Until */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium">Start Date</label>
-              <input
-                type="date"
-                value={formData.startDate}
-                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                className="w-full border rounded-lg p-2 mt-1"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium">Start Time</label>
-              <input
-                type="time"
-                value={formData.startTime}
-                onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-                className="w-full border rounded-lg p-2 mt-1"
-                required
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium">Valid Until Date</label>
-              <input
-                type="date"
-                value={formData.validUntilDate}
-                onChange={(e) => setFormData({ ...formData, validUntilDate: e.target.value })}
-                className="w-full border rounded-lg p-2 mt-1"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium">Valid Until Time</label>
-              <input
-                type="time"
-                value={formData.validUntilTime}
-                onChange={(e) => setFormData({ ...formData, validUntilTime: e.target.value })}
-                className="w-full border rounded-lg p-2 mt-1"
-                required
-              />
-            </div>
-          </div>
+              {/* Start Date + Start Time */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium">Start Date</label>
+                  <input
+                    type="date"
+                    value={formData.startDate}
+                    max={dateNowYYYYMMDD()} // 🚫 disallow future date
+                    onChange={(e) =>
+                      setFormData({ ...formData, startDate: e.target.value })
+                    }
+                    className="w-full border rounded-lg p-2 mt-1"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium">Start Time</label>
+                  <input
+                    type="time"
+                    value={formData.startTime}
+                    max={
+                      formData.startDate === dateNowYYYYMMDD()
+                        ? timeNowHHMM() // 🚫 disallow future time if today
+                        : undefined
+                    }
+                    onChange={(e) =>
+                      setFormData({ ...formData, startTime: e.target.value })
+                    }
+                    className="w-full border rounded-lg p-2 mt-1"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Valid Until Date + Time */}
+              <div className="grid grid-cols-2 gap-4 mt-4">
+                <div>
+                  <label className="block text-sm font-medium">Valid Until Date</label>
+                  <input
+                    type="date"
+                    value={formData.validUntilDate}
+                    min={dateNowYYYYMMDD()} // 🚫 disallow past dates
+                    onChange={(e) =>
+                      setFormData({ ...formData, validUntilDate: e.target.value })
+                    }
+                    className="w-full border rounded-lg p-2 mt-1"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium">Valid Until Time</label>
+                  <input
+                    type="time"
+                    value={formData.validUntilTime}
+                    min={
+                      formData.validUntilDate === dateNowYYYYMMDD()
+                        ? timeNowHHMM() // 🚫 disallow past time if today
+                        : undefined
+                    }
+                    onChange={(e) =>
+                      setFormData({ ...formData, validUntilTime: e.target.value })
+                    }
+                    className="w-full border rounded-lg p-2 mt-1"
+                    required
+                  />
+                </div>
+              </div>
 
           {/* Safe Zone */}
           <div>
