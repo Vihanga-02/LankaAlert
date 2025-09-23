@@ -12,42 +12,14 @@ import NotificationDropdown from "../../components/NotificationDropdown";
 
 // -------- Constants --------
 const districts = [
-  "Colombo",
-  "Gampaha",
-  "Kalutara",
-  "Kandy",
-  "Matale",
-  "Nuwara Eliya",
-  "Galle",
-  "Matara",
-  "Hambantota",
-  "Jaffna",
-  "Kilinochchi",
-  "Mannar",
-  "Vavuniya",
-  "Mullaitivu",
-  "Batticaloa",
-  "Ampara",
-  "Trincomalee",
-  "Kurunegala",
-  "Puttalam",
-  "Anuradhapura",
-  "Polonnaruwa",
-  "Badulla",
-  "Moneragala",
-  "Ratnapura",
-  "Kegalle",
+  "Colombo","Gampaha","Kalutara","Kandy","Matale","Nuwara Eliya","Galle",
+  "Matara","Hambantota","Jaffna","Kilinochchi","Mannar","Vavuniya","Mullaitivu",
+  "Batticaloa","Ampara","Trincomalee","Kurunegala","Puttalam","Anuradhapura","Polonnaruwa",
+  "Badulla","Moneragala","Ratnapura","Kegalle",
 ];
 
 const districtCities = {
-  Colombo: [
-    "Colombo",
-    "Homagama",
-    "Awissawella",
-    "Kaduwela",
-    "Moratuwa",
-    "Maharagama",
-  ],
+  Colombo: ["Colombo","Homagama","Awissawella","Kaduwela","Moratuwa","Maharagama","Kottawa"],
   Gampaha: ["Negombo", "Ja-Ela", "Wattala", "Kelaniya", "Ragama"],
   Kalutara: ["Kalutara", "Beruwala", "Panadura", "Horana", "Matugama"],
   Kandy: ["Kandy", "Peradeniya", "Gampola", "Akurana", "Kadugannawa"],
@@ -60,42 +32,18 @@ const districtCities = {
   Kilinochchi: ["Kilinochchi", "Pooneryn", "Karachchi", "Elephant Pass"],
   Mannar: ["Mannar", "Musali", "Madhu", "Nanattan"],
   Vavuniya: ["Vavuniya", "Vavuniya North", "Vavuniya South", "Vavuniya Urban"],
-  Mullaitivu: [
-    "Mullaitivu",
-    "Oddusuddan",
-    "Puthukkudiyiruppu",
-    "Maritimepattu",
-  ],
+  Mullaitivu: ["Mullaitivu","Oddusuddan","Puthukkudiyiruppu","Maritimepattu"],
   Batticaloa: ["Batticaloa", "Kalmunai", "Eravur", "Kalkudah", "Manmunai"],
   Ampara: ["Ampara", "Kalmunai", "Samanthurai", "Padiyathalawa", "Uhana"],
   Trincomalee: ["Trincomalee", "Kinniya", "Muttur", "Verugal", "Seruwila"],
-  Kurunegala: [
-    "Kurunegala",
-    "Maho",
-    "Dambulla",
-    "Alawwa",
-    "Kuliyapitiya",
-    "Polgahawela",
-  ],
+  Kurunegala: ["Kurunegala","Maho","Dambulla","Alawwa","Kuliyapitiya","Polgahawela"],
   Puttalam: ["Puttalam", "Chilaw", "Nawagathena", "Kalpitiya"],
-  Anuradhapura: [
-    "Anuradhapura",
-    "Mihintale",
-    "Padaviya",
-    "Kebithigollewa",
-    "Thalawa",
-  ],
+  Anuradhapura: ["Anuradhapura","Mihintale","Padaviya","Kebithigollewa","Thalawa"],
   Polonnaruwa: ["Polonnaruwa", "Dimbulagala", "Lankapura", "Welikanda"],
   Badulla: ["Badulla", "Hali-Ela", "Ella", "Mahiyanganaya", "Passara"],
   Moneragala: ["Moneragala", "Buttala", "Bibile", "Medagama", "Kataragama"],
   Ratnapura: ["Ratnapura", "Balangoda", "Elapatha", "Kuruwita", "Embilipitiya"],
-  Kegalle: [
-    "Kegalle",
-    "Deraniyagala",
-    "Ruwanwella",
-    "Mawanella",
-    "Yatiyantota",
-  ],
+  Kegalle: ["Kegalle","Deraniyagala","Ruwanwella","Mawanella","Yatiyantota"],
 };
 
 const dangerSubcategories = [
@@ -118,6 +66,7 @@ const DisasterAlertManagement = () => {
 
   // For modals
   const [selectedReport, setSelectedReport] = useState(null);
+  const [manualMode, setManualMode] = useState(false);
   const [zoneData, setZoneData] = useState(null);
 
   useEffect(() => {
@@ -159,15 +108,24 @@ const DisasterAlertManagement = () => {
     }
   };
 
-  // ✅ Create Alert
+  // ✅ Create Alert (from report)
   const handleCreateAlert = (report) => {
     setSelectedReport(report);
-    setZoneData(null); // make sure map modal is not open
+    setManualMode(false);
+    setZoneData(null);
+  };
+
+  // ✅ Manual Entry
+  const handleManualEntry = () => {
+    setSelectedReport(null);
+    setManualMode(true);
+    setZoneData(null);
   };
 
   // ✅ Mark on Map
   const handleMarkOnMap = (report) => {
-    setSelectedReport(null); // close alert form if open
+    setSelectedReport(null);
+    setManualMode(false);
     setZoneData({
       name: report.title || "",
       category: "danger",
@@ -212,7 +170,10 @@ const DisasterAlertManagement = () => {
         <div className="mt-4 sm:mt-0 flex items-center space-x-4">
           {/* Notification Bell */}
           <NotificationDropdown />
-          <button className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+          <button
+            onClick={handleManualEntry}
+            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
             <Plus className="h-5 w-5 mr-2" /> Add Manual Entry
           </button>
         </div>
@@ -359,6 +320,7 @@ const DisasterAlertManagement = () => {
                         </div>
                       </div>
                     </div>
+
                     <div className="flex space-x-3">
                       <button
                         onClick={() => handleCreateAlert(report)}
@@ -401,10 +363,13 @@ const DisasterAlertManagement = () => {
       )}
 
       {/* ✅ DisasterAlertForm Modal */}
-      {selectedReport && (
+      {(selectedReport || manualMode) && (
         <DisasterAlertForm
-          report={selectedReport}
-          onClose={() => setSelectedReport(null)}
+          report={manualMode ? null : selectedReport}
+          onClose={() => {
+            setSelectedReport(null);
+            setManualMode(false);
+          }}
           districts={districts}
           districtCities={districtCities}
           zones={zones.filter((z) => z.category === "safe")}
