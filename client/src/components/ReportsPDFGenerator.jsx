@@ -537,6 +537,7 @@ const downloadIndividualReportPDF = async (report) => {
     };
 
     // Professional footer with elegant design
+    // Professional footer with clean design (NO colored boxes)
     const addFooter = () => {
       const footerY = pageHeight - 25;
 
@@ -549,48 +550,22 @@ const downloadIndividualReportPDF = async (report) => {
       pdf.setTextColor(...colors.gray);
       pdf.text('Reporter Signature', margin, signatureY - 5);
 
-      // Footer accent line
-      pdf.setFillColor(...colors.accent);
-      pdf.rect(0, footerY - 5, pageWidth, 2, "F");
+      // Simple line separator (no colored boxes)
+      pdf.setDrawColor(...colors.gray);
+      pdf.setLineWidth(0.5);
+      pdf.line(margin, footerY, pageWidth - margin, footerY);
 
-      // Footer background
-      pdf.setFillColor(...colors.lightGray);
-      pdf.rect(0, footerY - 3, pageWidth, 20, "F");
-
-      // Professional footer content
+      // Clean footer content - single line format to avoid duplication
       pdf.setTextColor(...colors.gray);
       pdf.setFontSize(8);
       pdf.setFont("helvetica", "normal");
 
-      // Left side - Organization info
-      pdf.text(
-        "LankaAlert - Protecting Sri Lanka Together",
-        margin,
-        footerY + 8
-      );
-      pdf.text(
-        "Ministry of Disaster Management | Emergency Response Division",
-        margin,
-        footerY + 16
-      );
-
-      // Center - Contact information
+      // Single line with key info only
+      pdf.text("LankaAlert - Ministry of Disaster Management", margin, footerY + 10);
+      
+      // Center - Contact
       const centerX = pageWidth / 2;
-      pdf.text(
-        "Email: contact@lankaalert.gov.lk | Phone: 1919 (Emergency Hotline)",
-        centerX,
-        footerY + 8,
-        { align: "center" }
-      );
-      pdf.text(
-        "Website: www.lankaalert.gov.lk | Follow @LankaAlert",
-        centerX,
-        footerY + 16,
-        { align: "center" }
-      );
-
-      // Right side - Page info (placeholder - will be updated after content generation)
-      // REMOVED the problematic line that was here
+      pdf.text("Emergency: 1919 | contact@lankaalert.gov.lk", centerX, footerY + 10, { align: "center" });
     };
 
     // Add enhanced header
@@ -859,26 +834,7 @@ const downloadIndividualReportPDF = async (report) => {
       yPos += descriptionHeight + 30;
     }
 
-    // Professional document verification section
-    pdf.setFillColor(...colors.primaryLight);
-    pdf.rect(margin, yPos - 5, pageWidth - 2 * margin, 25, "F");
-    pdf.setDrawColor(...colors.primary);
-    pdf.setLineWidth(0.3);
-    pdf.rect(margin, yPos - 5, pageWidth - 2 * margin, 25, "S");
-
-    pdf.setTextColor(...colors.primary);
-    pdf.setFontSize(10);
-    pdf.setFont("helvetica", "bold");
-    pdf.text("🔒 Document Verification", margin + 10, yPos + 5);
-
-    pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(8);
-    pdf.setTextColor(...colors.gray);
-    pdf.text(
-      `This document was automatically generated on ${new Date().toISOString()} and contains verified disaster report information.`,
-      margin + 10,
-      yPos + 13
-    );
+    
 
     // Add professional footer
     addFooter();
@@ -887,30 +843,32 @@ const downloadIndividualReportPDF = async (report) => {
     setLoadingMessage("Finalizing elegant PDF...");
 
     // FIXED: Update page numbers on all pages
-    const totalPages = pdf.internal.getNumberOfPages();
-    for (let i = 1; i <= totalPages; i++) {
-      pdf.setPage(i);
+    
+    // Update page numbers on all pages
+        const totalPages = pdf.internal.getNumberOfPages();
+        for (let i = 1; i <= totalPages; i++) {
+          pdf.setPage(i);
 
-      // Position for page number (same as footer)
-      const footerY = pageHeight - 25;
+          // Position for page number (same as footer)
+          const footerY = pageHeight - 25;
 
-      // Clear only a small, precise area for the page number
-      pdf.setFillColor(...colors.lightGray);
-      pdf.rect(pageWidth - margin - 35, footerY + 8, 30, 8, "F");
+          // Clear only a small, precise area for the page number
+          pdf.setFillColor(...colors.lightGray);
+          pdf.rect(pageWidth - margin - 35, footerY + 6, 30, 8, "F");
 
-      // Add correct page number
-      pdf.setTextColor(...colors.gray);
-      pdf.setFontSize(8);
-      pdf.setFont("helvetica", "normal");
-      pdf.text(
-        `Page ${i} of ${totalPages}`,
-        pageWidth - margin,
-        footerY + 12,
-        {
-          align: "right",
+          // Add correct page number
+          pdf.setTextColor(...colors.gray);
+          pdf.setFontSize(8);
+          pdf.setFont("helvetica", "normal");
+          pdf.text(
+            `Page ${i} of ${totalPages}`,
+            pageWidth - margin,
+            footerY + 10,
+            {
+              align: "right",
+            }
+          );
         }
-      );
-    }
 
     const filename = `LankaAlert-Report-${
       report.title?.replace(/[^a-zA-Z0-9]/g, "_").substring(0, 20) ||
