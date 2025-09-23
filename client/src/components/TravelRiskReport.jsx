@@ -17,10 +17,24 @@ const TravelRiskReport = ({
     const margin = 15;
     let yPosition = 20;
 
-    // Header
+    // Header with logo
     doc.setFontSize(20);
     doc.setTextColor(40, 103, 178);
-    doc.text("LankaAlert Travel Risk Report", pageWidth / 2, yPosition, { align: "center" });
+    
+    // Add logo to the left side - using absolute path from public folder
+    try {
+      // Use the absolute path to the logo in the public folder
+      const logoPath = `${window.location.origin}/logo.png`;
+      // Add logo image (adjust dimensions as needed)
+      doc.addImage(logoPath, 'PNG', margin, yPosition - 5, 20, 20);
+      // Position text to the right of the logo
+      doc.text("LankaAlert Travel Risk Report", margin + 25, yPosition + 5);
+    } catch (error) {
+      // Fallback if logo fails to load
+      console.warn("Logo not found, using text-only header");
+      doc.text("LankaAlert Travel Risk Report", pageWidth / 2, yPosition, { align: "center" });
+    }
+    
     yPosition += 15;
 
     // Timestamp
@@ -268,7 +282,7 @@ const TravelRiskReport = ({
       <div className="text-xs text-gray-500 mb-2">
         <p>Generated: {timestamp}</p>
         {userLocation && (
-          <p>Your location: {userLocation.lat.toFixed(4)}, {userLocation.lng.toFixed(4)}</p>
+          <p>Your location: ${userLocation.lat.toFixed(4)}, ${userLocation.lng.toFixed(4)}</p>
         )}
       </div>
       

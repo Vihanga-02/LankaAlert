@@ -158,10 +158,11 @@ const [availableCities, setAvailableCities] = useState([]);
       <div className="max-w-2xl mx-auto">
         {/* Logo and Header */}
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center space-x-2 mb-6">
+          {/* Logo with Link to Home */}
+          <Link to="/" className="flex items-center justify-center space-x-2 mb-6">
             <MapPin className="h-10 w-10 text-blue-600" />
             <span className="text-3xl font-bold text-blue-900">Lanka Alert</span>
-          </div>
+          </Link>
           <h2 className="text-2xl font-bold text-gray-900">
             Create your account
           </h2>

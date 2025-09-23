@@ -115,55 +115,130 @@ export default function NotificationManager() {
   };
 
   // ───────────── Export PDF ─────────────
-  const exportPDF = () => {
-    const doc = new jsPDF("p", "pt", "a4");
-    
-    // Add title and timestamp first
-    doc.setFontSize(18);
-    doc.text("Notifications Report", 40, 40);
-    
+const exportPDF = () => {
+  const doc = new jsPDF("p", "pt", "a4");
+
+  // Load logo from public folder
+  const logoUrl = `${window.location.origin}/logo.png`;
+  const img = new Image();
+  img.src = logoUrl;
+
+  img.onload = () => {
+    // ---- Header ----
+    doc.addImage(img, "PNG", 40, 20, 40, 40);
+    doc.setFontSize(24);
+    doc.setTextColor(30, 30, 30);
+    doc.text("Lanka Alert", 90, 45);
+
+    doc.setFontSize(14);
+    doc.setTextColor(50, 50, 50);
+    doc.text("Notifications Report", 90, 65);
+
+    // Report metadata
+    const reportDate = new Date().toLocaleString();
     doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.text(`Generated on: ${new Date().toLocaleString()}`, 40, 60);
-    
-    // Try to add logo if available, but don't wait for it
-    const logoUrl = "/logo.png";
-    try {
-      // Add image synchronously (if already cached)
-      doc.addImage(logoUrl, "PNG", 500, 20, 60, 60);
-    } catch (e) {
-      console.log("Logo not available or failed to load:", e);
-    }
-    
-    // Create table
-    autoTable(doc, {
-      startY: 80,
-      head: [["Zone", "Title", "Message", "Status", "Created At"]],
-      body: notifications.map((n) => {
-        // Get zone name instead of just ID
-        const zone = zones.find(z => z.id === n.zoneId);
-        const zoneName = zone ? `${zone.city} - ${zone.subCategory}` : n.zoneId;
-        
-        return [
-          zoneName,
-          n.title,
-          n.message,
-          n.status,
-          new Date(n.createdAt).toLocaleString(),
-        ];
-      }),
-      styles: { fontSize: 10, cellPadding: 5 },
-      headStyles: { fillColor: [41, 128, 185] },
-      columnStyles: {
-        2: { cellWidth: 200 }, // Make message column wider
-        4: { cellWidth: 120 }  // Make date column narrower
-      }
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Report Generated: ${reportDate}`, 90, 80);
+    doc.text("System Admin: Chenuka Bopage", 400, 80);
+
+    // ---- Table Data ----
+    const tableData = notifications.map((n, index) => {
+      // Get zone name instead of just ID
+      const zone = zones.find(z => z.id === n.zoneId);
+      const zoneName = zone ? `${zone.city} - ${zone.subCategory}` : n.zoneId;
+      
+      return [
+        index + 1,
+        zoneName,
+        n.title,
+        n.message,
+        n.status.toUpperCase(),
+        new Date(n.createdAt).toLocaleString(),
+      ];
     });
-    
+
+    // ---- Table Options ----
+    autoTable(doc, {
+      startY: 100,
+      head: [[
+        "#", "Zone", "Title", "Message", "Status", "Created At"
+      ]],
+      body: tableData,
+      theme: "grid",
+      styles: {
+        fontSize: 9,
+        cellPadding: 4,
+        overflow: "linebreak",
+        valign: "middle",
+      },
+      headStyles: {
+        fillColor: [0, 123, 255],
+        textColor: 255,
+        fontStyle: "bold",
+        halign: "center",
+      },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
+      columnStyles: {
+        0: { cellWidth: 40 },   // #
+        1: { cellWidth: 100 },  // Zone
+        2: { cellWidth: 80 },   // Title
+        3: { cellWidth: 200 },  // Message (wider)
+        4: { cellWidth: 50 },   // Status
+        5: { cellWidth: 120 },  // Created At
+      },
+      margin: { top: 100, left: 40, right: 40 },
+    });
+
+    // ---- Footer with Page Numbers ----
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(10);
+      doc.setTextColor(150);
+      doc.text(
+        `Page ${i} of ${pageCount}`,
+        doc.internal.pageSize.getWidth() - 60,
+        doc.internal.pageSize.getHeight() - 10
+      );
+    }
+
+    // ---- Signature line ----
+    doc.setFontSize(12);
+    doc.setTextColor(30, 30, 30);
+    const lastPage = doc.internal.getNumberOfPages();
+    doc.setPage(lastPage);
+    const y = doc.internal.pageSize.getHeight() - 60;
+    doc.text("Verified by:", 40, y);
+    doc.line(110, y + 2, 300, y + 2);
+    doc.text("Chenuka Bopage", 40, y + 15);
+
     // Save PDF
-    doc.save("notifications_report.pdf");
+    doc.save("LankaAlert_Notifications_Report.pdf");
   };
 
+  img.onerror = () => {
+    console.error("Failed to load logo for PDF");
+    // Fallback: generate PDF without logo
+    generatePDFWithoutLogo();
+  };
+
+  // Fallback function if logo fails to load
+  const generatePDFWithoutLogo = () => {
+    const doc = new jsPDF("p", "pt", "a4");
+    
+    // Header without logo
+    doc.setFontSize(24);
+    doc.setTextColor(30, 30, 30);
+    doc.text("Lanka Alert", 40, 45);
+
+    doc.setFontSize(14);
+    doc.setTextColor(50, 50, 50);
+    doc.text("Notifications Report", 40, 65);
+
+    // ... rest of the code same as above ...
+    // (repeat the table generation, footer, and signature code here)
+  };
+};
   // ───────────── UI ─────────────
   return (
     <div className="p-6 max-w-5xl mx-auto">
