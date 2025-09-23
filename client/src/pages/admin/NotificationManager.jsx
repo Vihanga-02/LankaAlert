@@ -116,7 +116,7 @@ export default function NotificationManager() {
 
   // ───────────── Export PDF ─────────────
 const exportPDF = () => {
-  const doc = new jsPDF("p", "pt", "a4");
+  const doc = new jsPDF("1", "pt", "a4");
 
   // Load logo from public folder
   const logoUrl = `${window.location.origin}/logo.png`;
@@ -180,11 +180,11 @@ const exportPDF = () => {
       alternateRowStyles: { fillColor: [245, 245, 245] },
       columnStyles: {
         0: { cellWidth: 40 },   // #
-        1: { cellWidth: 100 },  // Zone
+        1: { cellWidth: 80 },  // Zone
         2: { cellWidth: 80 },   // Title
         3: { cellWidth: 200 },  // Message (wider)
-        4: { cellWidth: 50 },   // Status
-        5: { cellWidth: 120 },  // Created At
+        4: { cellWidth: 40 },   // Status
+        5: { cellWidth: 100 },  // Created At
       },
       margin: { top: 100, left: 40, right: 40 },
     });
