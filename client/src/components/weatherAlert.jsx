@@ -84,27 +84,39 @@ const WeatherAlert = () => {
   };
 
   // ---- Generate PDF ----
-  const generatePDF = () => {
-    const doc = new jsPDF("landscape", "pt", "a4"); // Set to landscape layout
+const generatePDF = () => {
+  const doc = new jsPDF("landscape", "pt", "a4"); // Set to landscape layout
 
-    // ---- Header ----
-    doc.setFontSize(20);
+  // ---- Header ----
+  const logoUrl = `${window.location.origin}/logo.png`; // URL of the logo
+  const img = new Image();
+  img.src = logoUrl;
+
+  img.onload = () => {
+    // Add the logo image to the PDF
+    doc.addImage(img, "PNG", 40, 20, 40, 40); // Adjust positioning (x, y, width, height)
+
+    // ---- Title and Report Metadata ----
+    doc.setFontSize(24);
     doc.setTextColor(30, 30, 30);
-    doc.text("Weather Alerts Report", 40, 50);
+    doc.text("Weather Alerts Report", 90, 45);
 
-    // Report metadata
+    doc.setFontSize(14);
+    doc.setTextColor(50, 50, 50);
+    doc.text("Created Disaster Alerts Report", 90, 65);
+
     const reportDate = new Date().toLocaleString();
-    doc.setFontSize(12);
+    doc.setFontSize(10);
     doc.setTextColor(100, 100, 100);
-    doc.text(`Report Generated: ${reportDate}`, 40, 70);
-    doc.text("System Admin: Maleesha Shehan", 430, 70);
+    doc.text(`Report Generated: ${reportDate}`, 90, 80);
+    doc.text("System Admin: Maleesha Shehan", 450, 80); // Add admin name (adjust position if necessary)
 
     // ---- Add Pie Chart as Image ----
     const pieChartCanvas = document.querySelector("canvas"); // Get the Pie chart canvas
     const pieChartImage = pieChartCanvas.toDataURL("image/png"); // Convert the canvas to a Base64 image
 
     // Add Pie chart image to the PDF (position at x=40, y=100, width=350, height=250)
-    doc.addImage(pieChartImage, "PNG", 40, 100, 300, 220);
+    doc.addImage(pieChartImage, "PNG", 40, 100, 260, 220);
 
     // ---- Alert Count ----
     const alertCount = filteredAlerts.reduce((acc, alert) => {
@@ -160,16 +172,17 @@ const WeatherAlert = () => {
     autoTable(doc, {
       startY: doc.lastAutoTable.finalY + 20, // Set table starting position after the alert count table
       head: [
-        ["#", "City", "Alert Type", "Message", "Risk Level", "Date Created"]
+        ["Number", "City", "Alert Type", "Message", "Risk Level", "Date Created"]
       ],
       body: tableData,
       theme: "grid",
       styles: {
-        fontSize: 9,
-        cellPadding: 4,
+        fontSize: 10,
+        cellPadding: 6,
         overflow: "linebreak",
         valign: "middle",
-        halign: "center", // Center align the table
+        halign: "middle", // Center align the table
+        fontStyle: "bold"
       },
       headStyles: {
         fillColor: [0, 123, 255],
@@ -179,9 +192,9 @@ const WeatherAlert = () => {
       alternateRowStyles: { fillColor: [245, 245, 245] },
       columnStyles: {
         0: { cellWidth: 60 },  // Number column width
-        1: { cellWidth: 120 }, // City column width
-        2: { cellWidth: 120 }, // Type column width
-        3: { cellWidth: 220 }, // Message column width
+        1: { cellWidth: 80 }, // City column width
+        2: { cellWidth: 80 }, // Type column width
+        3: { cellWidth: 350 }, // Message column width
         4: { cellWidth: 80 },  // Risk level column width
         5: { cellWidth: 80 },  // Date column width
       },
@@ -204,6 +217,12 @@ const WeatherAlert = () => {
     // Save PDF
     doc.save("WeatherAlerts_Report.pdf");
   };
+
+  img.onerror = () => {
+    console.error("Failed to load logo for PDF");
+  };
+};
+
 
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8">
