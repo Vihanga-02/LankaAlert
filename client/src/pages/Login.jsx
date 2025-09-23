@@ -48,10 +48,14 @@ const Login = () => {
       <div className="max-w-md w-full space-y-8">
         {/* Logo */}
         <div className="text-center">
-          <div className="flex items-center justify-center space-x-2 mb-6">
+          <Link to="/" className="flex items-center justify-center space-x-2 mb-6">
             <MapPin className="h-10 w-10 text-blue-600" />
             <span className="text-3xl font-bold text-blue-900">Lanka Alert</span>
-          </div>
+          </Link>
+        </div>
+
+        {/* Header Section */}
+        <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900">Sign in to your account</h2>
           <p className="mt-2 text-sm text-gray-600">
             Or{' '}
