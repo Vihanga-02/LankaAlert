@@ -19,22 +19,22 @@ const SituationReports = () => {
       title: 'Landslide Warning - Central Province',
       type: 'Landslide Warning',
       icon: <Mountain className="h-6 w-6" />,
-      status: 'Critical',
-      severity: 'Critical',
+      status: 'Active',
+      severity: 'medium',
       location: 'Kandy, Matale, Nuwara Eliya',
       time: '1 hour ago',
-      description: 'High risk of landslides in hilly areas. Evacuation advised for vulnerable locations.'
+      description: 'Some risk of landslides in hilly areas. Evacuation advised for vulnerable locations.'
     },
     {
       id: 3,
-      title: 'Flood Alert - Southern Province',
-      type: 'Flood Warning',
+      title: 'High Wind Alets',
+      type: 'Wind Warning',
       icon: <Waves className="h-6 w-6" />,
       status: 'Active',
       severity: 'Medium',
       location: 'Galle, Matara, Hambantota',
       time: '3 hours ago',
-      description: 'River levels rising. Residents in low-lying areas advised to remain vigilant.'
+      description: 'High wind alerts is active for coastal areas. Secure loose objects and avoid outdoor activities.'
     },
     {
       id: 4,
