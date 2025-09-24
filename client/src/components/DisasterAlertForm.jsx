@@ -317,7 +317,6 @@ const validateDates = () => {
                 onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                 className="w-full border rounded-lg p-2 mt-1"
                 disabled={!formData.district}
-                required
               >
                 <option value="">Select City</option>
                 {(districtCities[formData.district] || []).map((c) => (
