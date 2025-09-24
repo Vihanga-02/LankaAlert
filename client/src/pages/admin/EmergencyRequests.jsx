@@ -15,6 +15,9 @@ import {
 } from "lucide-react";
 import { useEmergency } from "../../context/EmergencyContext";
 import { useInventory } from "../../context/InventoryContext";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+
 
 const statusColors = {
   Pending: "bg-orange-100 text-orange-800",
@@ -48,6 +51,87 @@ const EmergencyRequests = () => {
   useEffect(() => {
     if (!isLoading) setLoading(false);
   }, [isLoading]);
+
+  // ---------------- PDF Generation ----------------
+const generateAllRequestsPDF = () => {
+  if (!allRequests || allRequests.length === 0) {
+    alert("No requests to generate PDF.");
+    return;
+  }
+
+  const doc = new jsPDF();
+
+  // Header
+  doc.setFontSize(20);
+  doc.setTextColor(40, 40, 40);
+  doc.text("Lanka Alert", 105, 20, { align: "center" });
+
+  doc.setFontSize(14);
+  doc.setTextColor(100, 100, 100);
+  doc.text("Emergency Requests Summary", 105, 30, { align: "center" });
+
+  doc.setFontSize(10);
+  doc.setTextColor(120, 120, 120);
+  doc.text(`Report Generated: ${new Date().toLocaleString()}`, 105, 40, { align: "center" });
+
+  doc.text("System Admin: Dulmini Tharushika", 105, 47, { align: "center" });
+
+  try {
+    const logoUrl = `${window.location.origin}/logo.png`;
+    doc.addImage(logoUrl, "PNG", 20, 10, 15, 15);
+  } catch (err) {
+    console.log("Logo not found, skipping...");
+  }
+
+  const columns = [
+    { header: "Name", dataKey: "name" },
+    { header: "Phone", dataKey: "phone" },
+    { header: "Location", dataKey: "location" },
+    { header: "Emergency Type", dataKey: "emergencyType" },
+    { header: "Urgency", dataKey: "urgency" },
+    { header: "Status", dataKey: "status" },
+    { header: "Requested At", dataKey: "createdAt" },
+    { header: "Needs Help", dataKey: "needsHelp" },
+    { header: "Food Items", dataKey: "foodItems" },
+    { header: "Medical Items", dataKey: "medicalItems" },
+  ];
+
+  const rows = allRequests.map((req) => ({
+    name: req.name || req.user?.name || "N/A",
+    phone: req.phone || req.user?.phone || "N/A",
+    location: req.location || req.user?.location || "N/A",
+    emergencyType: req.emergencyType || "N/A",
+    urgency: req.urgency ? req.urgency.charAt(0).toUpperCase() + req.urgency.slice(1) : "N/A",
+    status: req.status || "Pending",
+    createdAt: req.createdAt?.toDate ? req.createdAt.toDate().toLocaleString() : "Unknown",
+    needsHelp: req.needsHelp?.join(", ") || "N/A",
+    foodItems: req.foodItems?.map((f) => `${f.name} (Qty: ${f.quantity})`).join("; ") || "N/A",
+    medicalItems: req.medicalItems?.map((m) => `${m.name} (Qty: ${m.quantity})`).join("; ") || "N/A",
+  }));
+
+  autoTable(doc, {
+    startY: 50,
+    head: [columns.map((c) => c.header)],
+    body: rows.map((row) => columns.map((c) => row[c.dataKey])),
+    styles: { fontSize: 8, cellPadding: 2 },
+    headStyles: { fillColor: [54, 162, 235], textColor: 255, fontStyle: "bold" },
+    alternateRowStyles: { fillColor: [245, 245, 245] },
+    theme: "grid",
+    margin: { top: 50 },
+  });
+  const finalY = doc.lastAutoTable.finalY + 10;
+  
+  doc.setFontSize(10);
+  doc.setTextColor(100, 100, 100);
+  doc.text("Verified by: ______", 20, finalY + 10);
+  doc.text("Dulmini Tharushika", 20, finalY + 20);
+  
+  doc.text(`Page 1 of 1`, 195, finalY + 20, { align: "right" });
+
+  doc.save(`LankaAlert_All_Requests_${new Date().toISOString().split("T")[0]}.pdf`);
+};
+// ------------------------------------------------
+
 
   if (loading) {
     return <div className="p-6 text-center text-gray-500">Loading requests...</div>;
@@ -159,6 +243,15 @@ const EmergencyRequests = () => {
   return (
     <div className="p-6 font-sans bg-gray-100 min-h-screen">
       <h1 className="text-3xl font-bold mb-6 text-center text-gray-900">Emergency Requests</h1>
+      {/* PDF Button */}
+      <div className="flex justify-right mb-6">
+        <button
+          onClick={generateAllRequestsPDF}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500"
+        >
+          📄 Generate PDF
+        </button>
+      </div>
       <ul className="space-y-6">
         {sortedRequests.map((req) => {
           const statusClass = statusColors[req.status || "Pending"];

@@ -96,115 +96,128 @@ const generatePDF = () => {
     return;
   }
 
-  const doc = new jsPDF();
-  
-  // Add logo/image at the top (you'll need to add your logo to the project)
-  // For now, I'll add a placeholder text for the logo
-  doc.setFontSize(20);
-  doc.setTextColor(40, 40, 40);
-  doc.text("Lanka Alert", 105, 20, { align: "center" });
-  doc.setFontSize(12);
-  doc.setTextColor(100, 100, 100);
-  doc.text("Inventory Management Report", 105, 28, { align: "center" });
-  
-  // Report metadata
-  const currentDate = new Date().toLocaleDateString();
-  const currentTime = new Date().toLocaleTimeString();
-  
-  doc.setFontSize(10);
-  doc.setTextColor(80, 80, 80);
-  doc.text(`Report Generated: ${currentDate}, ${currentTime}`, 14, 40);
-  doc.text(`System Admin: Dulmini Tharushika`, 14, 46);
-  
-  // Separate food and medical items
-  const foodItems = inventory.filter((i) => i.category === "food");
-  const medicalItems = inventory.filter((i) => i.category === "medical");
-  
-  // Table headers matching the sample format
-  const columns = [
-    { header: "Name", dataKey: "name" },
-    { header: "Description", dataKey: "description" },
-    { header: "Category", dataKey: "category" },
-    { header: "Current Stock", dataKey: "currentStock" },
-    { header: "Min Threshold", dataKey: "minThreshold" },
-    { header: "Status", dataKey: "status" },
-  ];
+  const doc = new jsPDF("landscape", "pt", "a4");
 
-  let startY = 60;
+  // Load logo from public folder
+  const logoUrl = `${window.location.origin}/logo.png`;
+  const img = new Image();
+  img.src = logoUrl;
 
-  // Function to create table with proper styling
-  const createTable = (items, title) => {
-    if (items.length === 0) return startY;
-    
-    // Add section title
-    doc.setFontSize(12);
-    doc.setTextColor(40, 40, 40);
-    doc.text(title, 14, startY);
-    startY += 8;
+  img.onload = () => {
+    // ---- Header ----
+    doc.addImage(img, "PNG", 40, 20, 40, 40);
+    doc.setFontSize(24);
+    doc.setTextColor(30, 30, 30);
+    doc.text("Lanka Alert", 90, 45);
 
-    const rows = items.map((item) => ({
-      name: item.name,
-      description: item.description || "No description available",
-      category: item.category === "food" ? "Food" : "Medical",
-      currentStock: item.currentStock.toString(),
-      minThreshold: item.minThreshold.toString(),
-      status: item.status,
-    }));
+    doc.setFontSize(14);
+    doc.setTextColor(50, 50, 50);
+    doc.text("Inventory Management Report", 90, 65);
 
-    autoTable(doc, {
-      startY: startY,
-      head: [columns.map((col) => col.header)],
-      body: rows.map((row) => columns.map((col) => row[col.dataKey])),
-      theme: "grid",
-      headStyles: { 
-        fillColor: [54, 162, 235], 
-        textColor: 255,
-        fontStyle: 'bold',
-        fontSize: 10
-      },
-      bodyStyles: {
-        fontSize: 9,
-        cellPadding: 3,
-      },
-      styles: {
-        fontSize: 9,
-        cellPadding: 3,
-        overflow: 'linebreak'
-      },
-      columnStyles: {
-        0: { cellWidth: 25 }, // Name
-        1: { cellWidth: 45 }, // Description
-        2: { cellWidth: 20 }, // Category
-        3: { cellWidth: 20 }, // Current Stock
-        4: { cellWidth: 20 }, // Min Threshold
-        5: { cellWidth: 20 }, // Status
-      },
-      margin: { left: 14, right: 14 },
-    });
+    // Report metadata
+    const reportDate = new Date().toLocaleString();
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Report Generated: ${reportDate}`, 90, 80);
+    doc.text("System Admin: Dulmini Tharushika", 400, 80);
 
-    return doc.lastAutoTable.finalY + 15;
+    // ---- Separate food and medical items ----
+    const foodItems = inventory.filter((i) => i.category === "food");
+    const medicalItems = inventory.filter((i) => i.category === "medical");
+
+    // ---- Table Columns (no description) ----
+    const columns = [
+      { header: "Name", dataKey: "name" },
+      { header: "Category", dataKey: "category" },
+      { header: "Current Stock", dataKey: "currentStock" },
+      { header: "Min Threshold", dataKey: "minThreshold" },
+      { header: "Status", dataKey: "status" },
+    ];
+
+    let startY = 100;
+
+    // ---- Function to create a table section ----
+    const createTable = (items, title) => {
+      if (items.length === 0) return startY;
+
+      // Section title
+      doc.setFontSize(12);
+      doc.setTextColor(40, 40, 40);
+      doc.text(title, 40, startY);
+      startY += 10;
+
+      const rows = items.map((item) => ({
+        name: item.name,
+        category: item.category === "food" ? "Food" : "Medical",
+        currentStock: item.currentStock.toString(),
+        minThreshold: item.minThreshold.toString(),
+        status: item.status,
+      }));
+
+      autoTable(doc, {
+        startY: startY,
+        head: [columns.map((col) => col.header)],
+        body: rows.map((row) => columns.map((col) => row[col.dataKey])),
+        theme: "grid",
+        styles: {
+          fontSize: 9,
+          cellPadding: 4,
+          overflow: "linebreak",
+          valign: "middle",
+        },
+        headStyles: {
+          fillColor: [0, 123, 255],
+          textColor: 255,
+          fontStyle: "bold",
+          halign: "center",
+        },
+        alternateRowStyles: { fillColor: [245, 245, 245] },
+        columnStyles: {
+          0: { cellWidth: 140 }, // Name
+          1: { cellWidth: 100 }, // Category
+          2: { cellWidth: 100 }, // Current Stock
+          3: { cellWidth: 100 }, // Min Threshold
+          4: { cellWidth: 100 }, // Status
+        },
+        margin: { top: 100, left: 40, right: 40 },
+      });
+
+      return doc.lastAutoTable.finalY + 20;
+    };
+
+    // ---- Add food + medical tables ----
+    if (foodItems.length > 0) {
+      startY = createTable(foodItems, " Food Items Inventory");
+    }
+    if (medicalItems.length > 0) {
+      startY = createTable(medicalItems, " Medical Items Inventory");
+    }
+
+    // ---- Footer with Page Numbers ----
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(10);
+      doc.setTextColor(150);
+      doc.text(
+        `Page ${i} of ${pageCount}`,
+        doc.internal.pageSize.getWidth() - 60,
+        doc.internal.pageSize.getHeight() - 10
+      );
+    }
+
+
+
+    // ---- Save PDF ----
+    doc.save("LankaAlert_Inventory_Report.pdf");
   };
 
-  // Create tables for each category
-  if (foodItems.length > 0) {
-    startY = createTable(foodItems, "Food Items Inventory");
-  }
-  
-  if (medicalItems.length > 0) {
-    startY = createTable(medicalItems, "Medical Items Inventory");
-  }
-
-  // Add footer with verification line
-  const finalY = doc.lastAutoTable.finalY + 20;
-  if (finalY < 280) {
-    doc.setFontSize(10);
-    doc.text("Verified by: ______", 14, finalY);
-    doc.text("Dulmini Tharushika", 14, finalY + 6);
-    doc.text(`Page 1 of 1`, 105, finalY + 6, { align: "center" });
-  }
-
-  doc.save("LankaAlert_Inventory_Report.pdf");
+  img.onerror = () => {
+    console.error("Failed to load logo for PDF");
+  };
 };
+
+
 
   return (
     <div className="p-6 space-y-6 bg-gradient-to-br from-indigo-50 to-blue-100 min-h-screen">
@@ -412,3 +425,4 @@ const generatePDF = () => {
 };
 
 export default InventoryManagement;
+

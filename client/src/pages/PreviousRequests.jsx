@@ -88,7 +88,7 @@ const PreviousRequests = () => {
     }
   };
 
-// Generate PDF with logo from public folder
+// Generate PDF with logo from public folder (No Description column)
 const generatePDF = () => {
   if (requests.length === 0) {
     alert("No requests to generate PDF.");
@@ -144,7 +144,7 @@ const generatePDF = () => {
     // Add system admin info
     doc.text("System Admin: Dulmini Tharushika", 105, 47, { align: "center" });
 
-    // Define table columns
+    // Define table columns (no description field)
     const columns = [
       { header: "Name", dataKey: "name" },
       { header: "Phone", dataKey: "phone" },
@@ -206,6 +206,7 @@ const generatePDF = () => {
     doc.save(`LankaAlert_Requests_Report_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 };
+
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
