@@ -353,16 +353,6 @@ const EmergencyHelp = () => {
 
           {/* Quick Actions & Info */}
           <div className="space-y-6">
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h3>
-              <div className="space-y-3">
-                <button className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2">
-                  <MessageSquare className="h-5 w-5" />
-                  <span>Chat with Support</span>
-                </button>
-              </div>
-            </div>
-
             <div className="bg-blue-50 rounded-lg p-6">
               <h3 className="text-lg font-bold text-blue-900 mb-4 flex items-center">
                 <Clock className="h-5 w-5 mr-2" />

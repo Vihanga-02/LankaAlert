@@ -318,7 +318,7 @@ const WeatherSearch = () => {
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Enter city name (e.g., New York, Tokyo, London)"
+                  placeholder="Enter city name (e.g., Homagama, Galle, Kaduwela)"
                   className="w-full pl-14 pr-32 py-4 text-lg border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300 bg-white/80 backdrop-blur-sm shadow-lg"
                   disabled={loading}
                 />
