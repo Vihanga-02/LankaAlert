@@ -6,41 +6,49 @@ class AIService {
   constructor() {
     this.apiKey = import.meta.env.VITE_GEMINI_API_KEY;
     this.genAI = new GoogleGenerativeAI(this.apiKey);
-    this.model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    this.model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     // System instruction for Sri Lankan weather assistant
     this.systemInstruction = `
-      You are Lanka Alert Assistant, a helpful and reliable AI for weather and disaster management in Sri Lanka. Your primary goal is to provide accurate, concise, and actionable information to help users stay safe and informed.
+      You are Lanka Alert Assistant, a helpful AI for weather and disaster management in Sri Lanka. Provide accurate, concise, and actionable information.
+
+      **CRITICAL LANGUAGE REQUIREMENT:**
+      - ALWAYS respond in the SAME LANGUAGE as the user's question
+      - If the user asks in Sinhala (සිංහල), respond in Sinhala
+      - If the user asks in English, respond in English
+      - Keep responses SHORT and CLEAR (2-3 sentences maximum)
 
       **Core Instructions:**
-      - **Persona:** Be calm, empathetic, and professional. Use a reassuring and helpful tone, especially during emergencies.
-      - **Language:** Respond in the same language as the user (English or Sinhala).
-      - **Data Priority:** Prioritize and strictly use the specific weather and disaster data provided to you in the user's prompt. Do not use external or general knowledge for data points like temperature, alert status, or inventory levels.
-      - **Conciseness:** Keep responses short and to the point. Provide only the most critical information first.
-      - **Handling Missing Data:** If you cannot find relevant information in the provided context, state that the data is not available for that specific query and suggest alternative actions (e.g., checking the alerts page).
+      - Be calm, professional, and helpful
+      - Use provided data first, then give general guidance
+      - Keep responses SHORT - maximum 2-3 sentences
+      - Focus on immediate actionable information
 
       **Response Guidelines:**
       - **Weather:**
-          - Mention the specific city.
-          - Use Celsius for temperature.
-          - Add a brief, relevant safety tip if conditions are extreme (e.g., "Stay indoors during heavy rain.").
-          - Acknowledge Sri Lanka's tropical and monsoon climate where appropriate.
+          - Mention city, temperature in Celsius, condition
+          - Add safety tip only if extreme weather
+          - Keep it brief and practical
 
       - **Disaster Alerts:**
-          - Clearly state the type of alert (e.g., "Flood Alert," "Landslide Warning").
-          - Mention the affected location(s) and their status.
-          - Provide immediate, actionable advice (e.g., "Evacuate to nearest safe zone.").
+          - State alert type, location, and status (active/expired)
+          - Give immediate actionable advice
+          - Mention safe zones if available
 
       - **Inventory/Supplies:**
-          - Report on stock levels concisely.
-          - For specific item queries, give a clear status (e.g., "Tents are in low stock.").
+          - Report stock levels clearly
+          - Mention low stock warnings
+          - Keep it factual and brief
 
-      **Example Sinhala phrases to understand and respond to:**
-      - 'කාලගුණය කොහොමද?' (What is the weather like?)
-      - 'ගංවතුර අනතුරු ඇඟවීම් තියෙනවද?' (Are there flood warnings?)
-      - 'කොළඹට හෙට කාලගුණය?' (Weather for Colombo tomorrow?)
-      - 'ආරක්ෂිත කලාප' (Safe zones)
-      - 'බඩු තොග' (Supplies/Inventory)
+      **Sinhala Response Examples:**
+      - Weather: "කොළඹ කාලගුණය 28°C, අර්ධ වලාකුළු. වර්ෂා සම්භාවිතාව 20%."
+      - Alerts: "කොළඹ ප්‍රදේශයේ ගංවතුර අනතුරු ඇඟවීම් නොමැත."
+      - Inventory: "කූඩු 50ක්, ආහාර පැකට් 200ක් තිබේ. ජල බෝතල් අඩුයි."
+
+      **English Response Examples:**
+      - Weather: "Colombo: 28°C, partly cloudy, 20% rain chance."
+      - Alerts: "No active flood warnings in Colombo."
+      - Inventory: "50 tents, 200 food packets available. Water bottles low."
     `;
   }
 
@@ -57,8 +65,16 @@ class AIService {
       if ((isDisasterQuery || isInventoryQuery) && !firebaseContext) {
         try {
           firebaseContext = await firebaseService.searchRelevantData(userMessage);
+          console.log('Firebase context loaded:', firebaseContext);
         } catch (error) {
           console.error('Error fetching Firebase context:', error);
+          // Provide fallback context
+          firebaseContext = {
+            alerts: [],
+            zones: [],
+            inventory: [],
+            summary: 'Unable to load data from database'
+          };
         }
       }
 
@@ -80,7 +96,7 @@ class AIService {
       }
 
       // Build disaster/safety prompt if Firebase context is available
-      if (firebaseContext && (firebaseContext.alerts.length > 0 || firebaseContext.zones.length > 0)) {
+      if (firebaseContext && (firebaseContext.alerts.length > 0 || firebaseContext.zones.length > 0 || firebaseContext.inventory.length > 0)) {
         contextualPrompt = this.buildDisasterPrompt(userMessage, firebaseContext, weatherContext);
       }
 
@@ -228,6 +244,8 @@ class AIService {
         prompt += `${index + 1}. ${firebaseService.formatInventoryItemForAI(item)}\n`;
       });
       prompt += '\n';
+    } else if (this.isInventoryQuery(userMessage)) {
+      prompt += `INVENTORY & SUPPLIES:\nNo inventory data available at the moment. Please check back later or contact the administrator.\n\n`;
     }
     
     // Add weather context if available
@@ -248,19 +266,32 @@ class AIService {
   // Fallback responses for when AI service fails
   getFallbackResponse(message) {
     const lowerMessage = message.toLowerCase();
+    const isSinhala = /[\u0D80-\u0DFF]/.test(message);
     
     if (lowerMessage.includes('weather') || lowerMessage.includes('temperature') || lowerMessage.includes('කාලගුණය') || lowerMessage.includes('උෂ්ණත්වය')) {
-      return "I'm currently unable to access the latest weather information. Please try again in a moment, or check the Weather Alerts page for current conditions. / මට මේ මොහොතේ කාලගුණ තොරතුරු ලබා ගැනීමට නොහැකිය. කරුණාකර මොහොතකින් නැවත උත්සාහ කරන්න, නැතහොත් කාලගුණ අනතුරු ඇඟවීම් පිටුව පරීක්ෂා කරන්න.";
+      return isSinhala ? 
+        "මට මේ මොහොතේ කාලගුණ තොරතුරු ලබා ගැනීමට නොහැකිය. කරුණාකර මොහොතකින් නැවත උත්සාහ කරන්න, නැතහොත් කාලගුණ අනතුරු ඇඟවීම් පිටුව පරීක්ෂා කරන්න." :
+        "I'm currently unable to access the latest weather information. Please try again in a moment, or check the Weather Alerts page for current conditions.";
     } else if (lowerMessage.includes('emergency') || lowerMessage.includes('help') || lowerMessage.includes('හදිසි') || lowerMessage.includes('උදව්')) {
-      return "For immediate emergencies, please call 119 (Police), 118 (Fire & Rescue), or 110 (Ambulance). You can also visit our Emergency Help page for more resources. / හදිසි අවස්ථාවන් සඳහා, කරුණාකර 119 (පොලිසිය), 118 (ගිනි නිවන සේවා) හෝ 110 (ගිලන් රථ) අමතන්න. වැඩි විස්තර සඳහා අපගේ හදිසි උදව් පිටුවට පිවිසිය හැක.";
+      return isSinhala ?
+        "හදිසි අවස්ථාවන් සඳහා, කරුණාකර 119 (පොලිසිය), 118 (ගිනි නිවන සේවා) හෝ 110 (ගිලන් රථ) අමතන්න. වැඩි විස්තර සඳහා අපගේ හදිසි උදව් පිටුවට පිවිසිය හැක." :
+        "For immediate emergencies, please call 119 (Police), 118 (Fire & Rescue), or 110 (Ambulance). You can also visit our Emergency Help page for more resources.";
     } else if (lowerMessage.includes('flood') || lowerMessage.includes('disaster') || lowerMessage.includes('ගංවතුර') || lowerMessage.includes('ආපදා')) {
-      return "For the latest disaster alerts and safety information, please check our alerts page. Stay informed through official channels and follow local authority guidelines. / නවතම ආපදා අනතුරු ඇඟවීම් සහ ආරක්ෂක තොරතුරු සඳහා, කරුණාකර අපගේ අනතුරු ඇඟවීම් පිටුව පරීක්ෂා කරන්න. නිල මූලාශ්‍රවලින් තොරතුරු ලබාගෙන පළාත් පාලන ආයතන වල උපදෙස් අනුගමනය කරන්න.";
+      return isSinhala ?
+        "නවතම ආපදා අනතුරු ඇඟවීම් සහ ආරක්ෂක තොරතුරු සඳහා, කරුණාකර අපගේ අනතුරු ඇඟවීම් පිටුව පරීක්ෂා කරන්න. නිල මූලාශ්‍රවලින් තොරතුරු ලබාගෙන පළාත් පාලන ආයතන වල උපදෙස් අනුගමනය කරන්න." :
+        "For the latest disaster alerts and safety information, please check our alerts page. Stay informed through official channels and follow local authority guidelines.";
     } else if (lowerMessage.includes('safe zone') || lowerMessage.includes('evacuation') || lowerMessage.includes('ආරක්ෂිත කලාප') || lowerMessage.includes('ඉවත් කිරීම')) {
-      return "I can help you find safe zones and evacuation points in your area. Please specify your location or check our map for the nearest safe zones. / ඔබට ඔබගේ ප්‍රදේශයේ ඇති ආරක්ෂිත කලාප සහ ඉවත් කිරීමේ ස්ථාන සොයා ගැනීමට මට උදව් කළ හැකිය. කරුණාකර ඔබගේ ස්ථානය සඳහන් කරන්න.";
+      return isSinhala ?
+        "ඔබට ඔබගේ ප්‍රදේශයේ ඇති ආරක්ෂිත කලාප සහ ඉවත් කිරීමේ ස්ථාන සොයා ගැනීමට මට උදව් කළ හැකිය. කරුණාකර ඔබගේ ස්ථානය සඳහන් කරන්න." :
+        "I can help you find safe zones and evacuation points in your area. Please specify your location or check our map for the nearest safe zones.";
     } else if (lowerMessage.includes('stock') || lowerMessage.includes('inventory') || lowerMessage.includes('තොග') || lowerMessage.includes('සම්පත්')) {
-      return "I can help you check current inventory levels and supply status. Please specify what items you're looking for or ask about low stock alerts. / දැනට පවතින තොග මට්ටම් සහ සැපයුම් තත්ත්වය පරීක්ෂා කිරීමට මට උදව් කළ හැකිය. කරුණාකර ඔබට අවශ්‍ය ද්‍රව්‍ය සඳහන් කරන්න.";
+      return isSinhala ?
+        "දැනට පවතින තොග මට්ටම් සහ සැපයුම් තත්ත්වය පරීක්ෂා කිරීමට මට උදව් කළ හැකිය. කරුණාකර ඔබට අවශ්‍ය ද්‍රව්‍ය සඳහන් කරන්න." :
+        "I can help you check current inventory levels and supply status. Please specify what items you're looking for or ask about low stock alerts.";
     } else {
-      return "I'm here to help with weather information and disaster management guidance for Sri Lanka. How can I assist you today? / මම ශ්‍රී ලංකාවේ කාලගුණ තොරතුරු සහ ආපදා කළමනාකරණ මගපෙන්වීම් සඳහා උදව් කිරීමට මෙහි සිටිමි. අද මට ඔබට උදව් කළ හැක්කේ කෙසේද?";
+      return isSinhala ?
+        "මම ශ්‍රී ලංකාවේ කාලගුණ තොරතුරු සහ ආපදා කළමනාකරණ මගපෙන්වීම් සඳහා උදව් කිරීමට මෙහි සිටිමි. අද මට ඔබට උදව් කළ හැක්කේ කෙසේද?" :
+        "I'm here to help with weather information and disaster management guidance for Sri Lanka. How can I assist you today?";
     }
   }
 

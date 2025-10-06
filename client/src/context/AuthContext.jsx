@@ -5,7 +5,7 @@ import {
   onAuthStateChanged,
   signOut,
 } from "firebase/auth";
-import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, getDoc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { auth, db } from "../services/firebase";
 
 const AuthContext = createContext();
@@ -92,8 +92,25 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  const updateUser = async (updates) => {
+    setIsLoading(true);
+    try {
+      const uid = user?.uid || auth.currentUser?.uid;
+      if (!uid) throw new Error("No authenticated user");
+      await updateDoc(doc(db, "users", uid), updates);
+      const updated = { ...(user || {}), ...updates };
+      setUser(updated);
+      return { success: true };
+    } catch (error) {
+      console.error("Update User Error:", error.message);
+      return { success: false, error: error.message };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, login, register, logout, isLoading, updateUser }}>
       {children}
     </AuthContext.Provider>
   );
