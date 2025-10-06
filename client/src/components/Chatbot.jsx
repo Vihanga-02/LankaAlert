@@ -1,16 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, Bot, Mic, MicOff, Volume2, VolumeX, MapPin, AlertTriangle, Shield } from 'lucide-react';
+import { MessageCircle, X, Send, Bot, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
 import aiService from '../services/aiService.js';
 import speechService from '../services/speechService.js';
-import aiWeatherService from '../services/aiWeatherService.js';
-import firebaseService from '../services/firebaseService.js';
 
 const Chatbot = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
     {
       id: 1,
-      text: "🌤️ සුභ දවසක්! Hello! I'm Lanka Alert Assistant. I can help you with:\n\n🌦️ Real-time weather updates and forecasts\n🚨 Current disaster alerts and warnings\n🛡️ Safe zones and evacuation points\n⚠️ Danger zones to avoid\n📦 Inventory and supply status\n📞 Emergency assistance\n\nTry asking me about weather, recent alerts, or safe areas in your location!",
+      text: "🌤️ සුභ දවසක්! Hello! I'm Lanka Alert Assistant.\n\nI can help with:\n🌦️ Weather updates\n🚨 Disaster alerts\n🛡️ Safe zones\n📦 Inventory status\n📞 Emergency help\n\nAsk me about weather, alerts, or safety in your area!",
       isBot: true,
       timestamp: new Date()
     }
@@ -20,6 +18,7 @@ const Chatbot = () => {
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const [currentLanguage, setCurrentLanguage] = useState('en');
 
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -51,7 +50,7 @@ const Chatbot = () => {
     setIsLoading(true);
 
     try {
-      // Get AI response with Firebase context
+      // Get AI response
       const botResponse = await aiService.generateResponse(messageText);
       
       const botMessage = {
@@ -71,7 +70,9 @@ const Chatbot = () => {
       console.error('Error getting bot response:', error);
       const errorMessage = {
         id: Date.now() + 1,
-        text: "Sorry, I'm having trouble connecting right now. Please try again in a moment.",
+        text: currentLanguage === 'si' ? 
+          "සමාවන්න, දැන් සම්බන්ධ වීමට අපහසුයි. කරුණාකර මොහොතකින් නැවත උත්සාහ කරන්න." :
+          "Sorry, I'm having trouble right now. Please try again.",
         isBot: true,
         timestamp: new Date()
       };
@@ -91,7 +92,7 @@ const Chatbot = () => {
     const onResult = (transcript) => {
       setIsListening(false);
       setInputText(transcript);
-      // Auto-send voice messages
+      // Auto-send voice messages after a short delay
       setTimeout(() => handleSendMessage(transcript), 500);
     };
 
@@ -99,20 +100,17 @@ const Chatbot = () => {
       setIsListening(false);
       console.error('Speech recognition error:', error);
       
-      const errorMessage = {
-        id: Date.now(),
-        text: `Voice input error: ${error}`,
-        isBot: true,
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, errorMessage]);
+      // Don't add error messages to chat, just log them
+      console.log('Voice recognition failed:', error);
     };
 
     const onEnd = () => {
       setIsListening(false);
     };
 
-    const success = speechService.startListening(onResult, onError, onEnd);
+    // Use current language for recognition
+    const recognitionLang = currentLanguage === 'si' ? 'si-LK' : 'en-US';
+    const success = speechService.startListening(onResult, onError, onEnd, recognitionLang);
     if (success) {
       setIsListening(true);
     }
@@ -143,14 +141,31 @@ const Chatbot = () => {
     }
   };
 
-  const getQuickActions = () => [
-    { text: "What's the weather in Colombo?", icon: "🌤️" },
-    { text: "Recent disaster alerts", icon: "🚨" },
-    { text: "Safe zones near me", icon: "🛡️" },
-    { text: "Current flood alerts", icon: "🌊" },
-    { text: "Inventory status", icon: "📋" },
-    { text: "Danger zones to avoid", icon: "⚠️" },
-  ];
+  const toggleLanguage = () => {
+    setCurrentLanguage(currentLanguage === 'en' ? 'si' : 'en');
+  };
+
+  const getQuickActions = () => {
+    if (currentLanguage === 'si') {
+      return [
+        { text: "කොළඹ කාලගුණය", icon: "🌤️" },
+        { text: "අලුත්ම අනතුරු ඇඟවීම්", icon: "🚨" },
+        { text: "ආරක්ෂිත කලාප", icon: "🛡️" },
+        { text: "ගංවතුර අනතුරු ඇඟවීම්", icon: "🌊" },
+        { text: "තොග තත්ත්වය", icon: "📋" },
+        { text: "අවදානම් කලාප", icon: "⚠️" },
+      ];
+    } else {
+      return [
+        { text: "Colombo weather", icon: "🌤️" },
+        { text: "Recent alerts", icon: "🚨" },
+        { text: "Safe zones", icon: "🛡️" },
+        { text: "Current flood alerts", icon: "🌊" },
+        { text: "Stock levels", icon: "📋" },
+        { text: "Danger zones", icon: "⚠️" },
+      ];
+    }
+  };
 
   const speechSupport = speechService.isSupported();
 
@@ -159,7 +174,7 @@ const Chatbot = () => {
       {/* Chat Button */}
       <button
         onClick={() => setIsOpen(true)}
-        className={`fixed bottom-6 right-6 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 rounded-full shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-300 z-40 transform hover:scale-110 ${
+        className={`fixed bottom-6 right-6 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 z-40 transform hover:scale-110 ${
           isOpen ? 'scale-0' : 'scale-100'
         }`}
         aria-label="Open Lanka Alert Assistant"
@@ -170,7 +185,7 @@ const Chatbot = () => {
 
       {/* Chat Window */}
       {isOpen && (
-        <div className="fixed bottom-6 right-6 w-80 sm:w-96 h-[550px] bg-white rounded-2xl shadow-2xl border z-50 flex flex-col overflow-hidden">
+        <div className="fixed bottom-6 right-6 w-80 sm:w-96 h-[600px] bg-white rounded-2xl shadow-2xl border z-50 flex flex-col overflow-hidden">
           {/* Header */}
           <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 rounded-t-2xl flex items-center justify-between">
             <div className="flex items-center space-x-3">
@@ -184,6 +199,13 @@ const Chatbot = () => {
               </div>
             </div>
             <div className="flex items-center space-x-2">
+              <button
+                onClick={toggleLanguage}
+                className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors text-xs font-semibold"
+                title={`Switch to ${currentLanguage === 'en' ? 'Sinhala' : 'English'}`}
+              >
+                {currentLanguage === 'en' ? 'සිං' : 'EN'}
+              </button>
               {speechSupport.synthesis && (
                 <button
                   onClick={toggleVoice}
@@ -301,7 +323,12 @@ const Chatbot = () => {
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                placeholder={isListening ? "Listening..." : "Ask about weather, alerts, safe zones, or emergencies..."}
+                placeholder={isListening ? 
+                  (currentLanguage === 'si' ? "අසමින්..." : "Listening...") : 
+                  (currentLanguage === 'si' ? 
+                    "කාලගුණය, අනතුරු ඇඟවීම්, ආරක්ෂිත කලාප ගැන අසන්න..." : 
+                    "Ask about weather, alerts, safe zones...")
+                }
                 className="flex-1 p-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
                 disabled={isLoading || isListening}
               />
@@ -334,7 +361,7 @@ const Chatbot = () => {
             {/* Voice feedback */}
             {isListening && (
               <div className="text-xs text-red-600 mt-2 text-center animate-pulse">
-                🎤 Listening... Speak now
+                🎤 {currentLanguage === 'si' ? 'අසමින්...' : 'Listening...'}
               </div>
             )}
           </div>

@@ -4,6 +4,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Check, FileText } from "lucide-react";
 import { useInventory } from "../../context/InventoryContext";
 import { useEmergency } from "../../context/EmergencyContext";
+import { sendSms } from "../../services/smsService";
 
 
 
@@ -55,6 +56,12 @@ const ApproveRequest = () => {
       setLoading(true);
       await handleUpdateRequest(request.id, { status: "Complete" });
       setRequest((prev) => ({ ...prev, status: "Complete" }));
+      // Send SMS to requester
+      const phone = request.phone || request.user?.phone;
+      if (phone) {
+        const message = `Lanka Alert: Your emergency request (${request.emergencyType || "General"}) has been approved. Our team is processing assistance. Stay safe.`;
+        try { await sendSms(phone, message); } catch (e) { console.error("SMS send failed", e); }
+      }
       alert("Request approved and marked as Complete.");
       navigate("/admin/emergency");
     } catch (err) {
@@ -103,6 +110,12 @@ const ApproveRequest = () => {
       if (allApproved) {
         await handleUpdateRequest(request.id, { status: "Complete" });
         setRequest((prev) => ({ ...prev, status: "Complete" }));
+        // Send SMS to requester
+        const phone = request.phone || request.user?.phone;
+        if (phone) {
+          const message = `Lanka Alert: Your emergency request (${request.emergencyType || "General"}) has been approved. Supplies are being arranged. Stay safe.`;
+          try { await sendSms(phone, message); } catch (e) { console.error("SMS send failed", e); }
+        }
         alert("All items approved — request marked as Complete.");
       } else {
         alert(`${itemName} approved. Remaining stock updated.`);

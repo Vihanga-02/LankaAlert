@@ -708,6 +708,20 @@ const Profile = () => {
               <h2 className="text-xl font-bold text-gray-900 mb-4">
                 Profile Information
               </h2>
+              {/* SMS Subscription status pill */}
+              <div className="mb-2">
+                <span
+                  className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
+                    (isEditing ? editForm.smsSubscribed : user.smsSubscribed)
+                      ? "bg-green-100 text-green-700"
+                      : "bg-gray-100 text-gray-700"
+                  }`}
+                >
+                  {(isEditing ? editForm.smsSubscribed : user.smsSubscribed)
+                    ? "SMS Alerts: Subscribed"
+                    : "SMS Alerts: Not Subscribed"}
+                </span>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Full Name
@@ -789,6 +803,50 @@ const Profile = () => {
                     </span>
                   </div>
                 )}
+              </div>
+
+              {/* Notification Preferences */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Notification Preferences
+                </label>
+                <div className="space-y-2">
+                  <label className="flex items-center space-x-3">
+                    <input
+                      type="checkbox"
+                      name="smsSubscribed"
+                      checked={editForm.smsSubscribed}
+                      onChange={handleInputChange}
+                      disabled={!isEditing}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700">
+                      Subscribe to SMS alerts for weather warnings
+                    </span>
+                  </label>
+                  <label className="flex items-center space-x-3">
+                    <input
+                      type="checkbox"
+                      name="farmerAlerts"
+                      checked={editForm.farmerAlerts}
+                      onChange={handleInputChange}
+                      disabled={!isEditing}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700">Receive specialized alerts for farmers</span>
+                  </label>
+                  <label className="flex items-center space-x-3">
+                    <input
+                      type="checkbox"
+                      name="fishermenAlerts"
+                      checked={editForm.fishermenAlerts}
+                      onChange={handleInputChange}
+                      disabled={!isEditing}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700">Receive specialized alerts for fishermen</span>
+                  </label>
+                </div>
               </div>
 
               <button
