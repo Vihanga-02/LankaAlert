@@ -3,7 +3,7 @@ export const sendSms = async (recipient, message) => {
     const apiKey = import.meta.env.VITE_TEXTLK_API_KEY; // use env variable
     const payload = {
       recipient,
-      sender_id: "TextLKDemo",
+      sender_id: "TextLKAlert",
       type: "plain",
       message,
     };

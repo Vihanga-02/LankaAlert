@@ -60,7 +60,16 @@ export const WeatherAlertProvider = ({ children }) => {
         dangerColor = "bg-orange-100 text-orange-800"; // Orange for Medium Risk
       }
     }
-
+     if (type === "flood") {
+      const floodDifferece = value - threshold;
+      if (floodDifferece >= 15) {
+        dangerLevel = "High Risk"; // High risk for values above threshold + 20
+        dangerColor = "bg-red-100 text-red-800"; // Red for High Risk
+      } else if (floodDifferece >= 7) {
+        dangerLevel = "Medium Risk"; // Medium risk for values above threshold + 10
+        dangerColor = "bg-orange-100 text-orange-800"; // Orange for Medium Risk
+      }
+    }
     return { dangerLevel, dangerColor };
   };
 

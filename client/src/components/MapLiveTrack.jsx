@@ -10,8 +10,8 @@ const containerStyle = {
 
 // Custom icons (replace with your actual image paths in /public)
 const dangerIcons = {
-  floods: { url: "/flood.png", w: 40, h: 40 },
-  landslides: { url: "/landslide.png", w: 40, h: 40 },
+  floods: { url: "/floodNew.png", w: 40, h: 40 },
+  landslides: { url: "/landslideNew.png", w: 40, h: 40 },
   "high wind": { url: "/highwind.png", w: 40, h: 40 },
   "power cuts": { url: "/nopower.png", w: 40, h: 40 },
   "water cuts": { url: "/nowater.png", w: 40, h: 40 },

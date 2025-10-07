@@ -6,25 +6,49 @@ class AIService {
   constructor() {
     this.apiKey = import.meta.env.VITE_GEMINI_API_KEY;
     this.genAI = new GoogleGenerativeAI(this.apiKey);
-    this.model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-    
+    this.model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+
     // System instruction for Sri Lankan weather assistant
     this.systemInstruction = `
-      You are Lanka Alert Assistant, a helpful weather and disaster management AI for Sri Lanka. 
-      Your role is to:
-      1. Provide accurate weather information for Sri Lankan cities
-      2. Offer disaster preparedness advice specific to Sri Lanka's climate
-      3. Give location-based weather alerts and safety recommendations
-      4. Understand both English and basic Sinhala/Tamil phrases
-      5. Be concise but informative in your responses
-      6. Focus on practical, actionable advice for Sri Lankan users
-      
-      When responding about weather:
-      - Always mention the specific city/location
-      - Include temperature in Celsius
-      - Mention monsoon patterns when relevant
-      - Provide safety advice for extreme weather
-      - Be aware of Sri Lanka's tropical climate and monsoon seasons
+      You are Lanka Alert Assistant, a helpful AI for weather and disaster management in Sri Lanka. Provide accurate, concise, and actionable information.
+
+      **CRITICAL LANGUAGE REQUIREMENT:**
+      - ALWAYS respond in the SAME LANGUAGE as the user's question
+      - If the user asks in Sinhala (සිංහල), respond in Sinhala
+      - If the user asks in English, respond in English
+      - Keep responses SHORT and CLEAR (2-3 sentences maximum)
+
+      **Core Instructions:**
+      - Be calm, professional, and helpful
+      - Use provided data first, then give general guidance
+      - Keep responses SHORT - maximum 2-3 sentences
+      - Focus on immediate actionable information
+
+      **Response Guidelines:**
+      - **Weather:**
+          - Mention city, temperature in Celsius, condition
+          - Add safety tip only if extreme weather
+          - Keep it brief and practical
+
+      - **Disaster Alerts:**
+          - State alert type, location, and status (active/expired)
+          - Give immediate actionable advice
+          - Mention safe zones if available
+
+      - **Inventory/Supplies:**
+          - Report stock levels clearly
+          - Mention low stock warnings
+          - Keep it factual and brief
+
+      **Sinhala Response Examples:**
+      - Weather: "කොළඹ කාලගුණය 28°C, අර්ධ වලාකුළු. වර්ෂා සම්භාවිතාව 20%."
+      - Alerts: "කොළඹ ප්‍රදේශයේ ගංවතුර අනතුරු ඇඟවීම් නොමැත."
+      - Inventory: "කූඩු 50ක්, ආහාර පැකට් 200ක් තිබේ. ජල බෝතල් අඩුයි."
+
+      **English Response Examples:**
+      - Weather: "Colombo: 28°C, partly cloudy, 20% rain chance."
+      - Alerts: "No active flood warnings in Colombo."
+      - Inventory: "50 tents, 200 food packets available. Water bottles low."
     `;
   }
 
@@ -34,17 +58,26 @@ class AIService {
       // Detect if user is asking about weather
       const isWeatherQuery = this.isWeatherQuery(userMessage);
       const isDisasterQuery = this.isDisasterQuery(userMessage);
+      const isInventoryQuery = this.isInventoryQuery(userMessage);
       let contextualPrompt = userMessage;
-      
+
       // Get Firebase data if relevant
-      if (isDisasterQuery && !firebaseContext) {
+      if ((isDisasterQuery || isInventoryQuery) && !firebaseContext) {
         try {
           firebaseContext = await firebaseService.searchRelevantData(userMessage);
+          console.log('Firebase context loaded:', firebaseContext);
         } catch (error) {
           console.error('Error fetching Firebase context:', error);
+          // Provide fallback context
+          firebaseContext = {
+            alerts: [],
+            zones: [],
+            inventory: [],
+            summary: 'Unable to load data from database'
+          };
         }
       }
-      
+
       if (isWeatherQuery && weatherContext) {
         contextualPrompt = this.buildWeatherPrompt(userMessage, weatherContext);
       } else if (isWeatherQuery && !weatherContext) {
@@ -61,9 +94,9 @@ class AIService {
           console.error('Error fetching weather for AI context:', error);
         }
       }
-      
+
       // Build disaster/safety prompt if Firebase context is available
-      if (firebaseContext && (firebaseContext.alerts.length > 0 || firebaseContext.zones.length > 0)) {
+      if (firebaseContext && (firebaseContext.alerts.length > 0 || firebaseContext.zones.length > 0 || firebaseContext.inventory.length > 0)) {
         contextualPrompt = this.buildDisasterPrompt(userMessage, firebaseContext, weatherContext);
       }
 
@@ -90,17 +123,21 @@ class AIService {
   // Check if user message is weather-related
   isWeatherQuery(message) {
     const weatherKeywords = [
-      'weather', 'temperature', 'rain', 'sunny', 'cloudy', 'forecast', 
+      'weather', 'temperature', 'rain', 'sunny', 'cloudy', 'forecast',
       'storm', 'wind', 'humidity', 'hot', 'cold', 'monsoon', 'cyclone',
       'flood', 'drought', 'climate', 'today', 'tomorrow', 'week'
     ];
     
-    const sinhalaWeatherWords = ['කාලගුණය', 'වර්ෂාව', 'හිරු', 'වලාකුළ'];
-    const tamilWeatherWords = ['வானிலை', 'மழை', 'வெயில்', 'மேகம்'];
-    
+    // Expanded Sinhala weather words
+    const sinhalaWeatherWords = [
+      'කාලගුණය', 'වර්ෂාව', 'වැස්ස', 'හිරු', 'වලාකුළු', 'උෂ්ණත්වය', 'අනාවැකි',
+      'සුළඟ', 'අධික', 'උණුසුම්', 'සීතල', 'මෝසම්', 'සුළි සුළං', 'ගංවතුර',
+      'නියඟය', 'අද', 'හෙට', 'සතිය'
+    ];
+
     const lowerMessage = message.toLowerCase();
     
-    return [...weatherKeywords, ...sinhalaWeatherWords, ...tamilWeatherWords]
+    return [...weatherKeywords, ...sinhalaWeatherWords]
       .some(keyword => lowerMessage.includes(keyword));
   }
 
@@ -110,15 +147,40 @@ class AIService {
       'alert', 'disaster', 'emergency', 'evacuation', 'safe zone', 'danger zone',
       'flood', 'landslide', 'cyclone', 'tsunami', 'fire', 'earthquake',
       'shelter', 'rescue', 'help', 'safety', 'risk', 'avoid', 'warning',
-      'recent alerts', 'current situation', 'safe areas', 'danger areas'
+      'recent alerts', 'current situation', 'safe areas', 'danger areas',
+      'active alerts', 'valid alerts', 'evacuation points', 'emergency contacts'
     ];
     
-    const sinhalaDisasterWords = ['ආපදාව', 'අනතුරු', 'ගලා යාම', 'ගිනි'];
-    const tamilDisasterWords = ['பேரிடர்', 'ஆபத்து', 'வெள்ளம்', 'தீ'];
-    
+    // Expanded Sinhala disaster words
+    const sinhalaDisasterWords = [
+      'ආපදා', 'අනතුරු', 'හදිසි', 'ගංවතුර', 'නාය යෑම්', 'සුළි සුළං', 'සුනාමි', 'ගිනි',
+      'ආරක්ෂිත කලාප', 'උදව්', 'සහන', 'ආරක්ෂාව', 'අනතුරු ඇඟවීම්', 'අවදානම්', 'වළක්වා',
+      'ඉවත් කිරීම', 'ආරක්ෂිත ස්ථාන', 'හදිසි දුරකථන'
+    ];
+
     const lowerMessage = message.toLowerCase();
     
-    return [...disasterKeywords, ...sinhalaDisasterWords, ...tamilDisasterWords]
+    return [...disasterKeywords, ...sinhalaDisasterWords]
+      .some(keyword => lowerMessage.includes(keyword));
+  }
+
+  // Check if user message is inventory/supplies related
+  isInventoryQuery(message) {
+    const inventoryKeywords = [
+      'stock', 'inventory', 'supplies', 'equipment', 'shortage', 'low stock',
+      'available', 'items', 'resources', 'materials', 'tools', 'medicine',
+      'food', 'water', 'blankets', 'tents', 'first aid', 'medical supplies'
+    ];
+    
+    // Expanded Sinhala inventory words
+    const sinhalaInventoryWords = [
+      'තොග', 'සම්පත්', 'උපකරණ', 'බඩු', 'හිඟයක්', 'අඩු තොග', 'ලබා ගත හැකි', 'අයිතම',
+      'ඖෂධ', 'ආහාර', 'වතුර', 'බෙහෙත්', 'ප්‍රථමාධාර', 'ජලය'
+    ];
+
+    const lowerMessage = message.toLowerCase();
+    
+    return [...inventoryKeywords, ...sinhalaInventoryWords]
       .some(keyword => lowerMessage.includes(keyword));
   }
 
@@ -174,6 +236,17 @@ class AIService {
       });
       prompt += '\n';
     }
+
+    // Add inventory information
+    if (firebaseContext.inventory && firebaseContext.inventory.length > 0) {
+      prompt += `INVENTORY & SUPPLIES:\n`;
+      firebaseContext.inventory.slice(0, 10).forEach((item, index) => {
+        prompt += `${index + 1}. ${firebaseService.formatInventoryItemForAI(item)}\n`;
+      });
+      prompt += '\n';
+    } else if (this.isInventoryQuery(userMessage)) {
+      prompt += `INVENTORY & SUPPLIES:\nNo inventory data available at the moment. Please check back later or contact the administrator.\n\n`;
+    }
     
     // Add weather context if available
     if (weatherContext) {
@@ -185,7 +258,7 @@ class AIService {
       prompt += '\n';
     }
     
-    prompt += 'Please provide a helpful response based on this disaster alert and zone information, along with any weather context. Include specific recommendations for safety and evacuation if relevant.';
+    prompt += 'Please provide a helpful response based on this disaster alert, zone and inventory information, along with any weather context. Include specific recommendations for safety and evacuation if relevant and use short answers.';
     
     return prompt;
   }
@@ -193,17 +266,32 @@ class AIService {
   // Fallback responses for when AI service fails
   getFallbackResponse(message) {
     const lowerMessage = message.toLowerCase();
+    const isSinhala = /[\u0D80-\u0DFF]/.test(message);
     
-    if (lowerMessage.includes('weather') || lowerMessage.includes('temperature')) {
-      return "I'm currently unable to access the latest weather information. Please try again in a moment, or check the Weather Alerts page for current conditions.";
-    } else if (lowerMessage.includes('emergency') || lowerMessage.includes('help')) {
-      return "For immediate emergencies, please call 119 (Police), 118 (Fire & Rescue), or 110 (Ambulance). You can also visit our Emergency Help page for more resources.";
-    } else if (lowerMessage.includes('flood') || lowerMessage.includes('disaster')) {
-      return "For the latest disaster alerts and safety information, please check our alerts page. Stay informed through official channels and follow local authority guidelines.";
-    } else if (lowerMessage.includes('safe zone') || lowerMessage.includes('evacuation')) {
-      return "I can help you find safe zones and evacuation points in your area. Please specify your location or check our map for the nearest safe zones.";
+    if (lowerMessage.includes('weather') || lowerMessage.includes('temperature') || lowerMessage.includes('කාලගුණය') || lowerMessage.includes('උෂ්ණත්වය')) {
+      return isSinhala ? 
+        "මට මේ මොහොතේ කාලගුණ තොරතුරු ලබා ගැනීමට නොහැකිය. කරුණාකර මොහොතකින් නැවත උත්සාහ කරන්න, නැතහොත් කාලගුණ අනතුරු ඇඟවීම් පිටුව පරීක්ෂා කරන්න." :
+        "I'm currently unable to access the latest weather information. Please try again in a moment, or check the Weather Alerts page for current conditions.";
+    } else if (lowerMessage.includes('emergency') || lowerMessage.includes('help') || lowerMessage.includes('හදිසි') || lowerMessage.includes('උදව්')) {
+      return isSinhala ?
+        "හදිසි අවස්ථාවන් සඳහා, කරුණාකර 119 (පොලිසිය), 118 (ගිනි නිවන සේවා) හෝ 110 (ගිලන් රථ) අමතන්න. වැඩි විස්තර සඳහා අපගේ හදිසි උදව් පිටුවට පිවිසිය හැක." :
+        "For immediate emergencies, please call 119 (Police), 118 (Fire & Rescue), or 110 (Ambulance). You can also visit our Emergency Help page for more resources.";
+    } else if (lowerMessage.includes('flood') || lowerMessage.includes('disaster') || lowerMessage.includes('ගංවතුර') || lowerMessage.includes('ආපදා')) {
+      return isSinhala ?
+        "නවතම ආපදා අනතුරු ඇඟවීම් සහ ආරක්ෂක තොරතුරු සඳහා, කරුණාකර අපගේ අනතුරු ඇඟවීම් පිටුව පරීක්ෂා කරන්න. නිල මූලාශ්‍රවලින් තොරතුරු ලබාගෙන පළාත් පාලන ආයතන වල උපදෙස් අනුගමනය කරන්න." :
+        "For the latest disaster alerts and safety information, please check our alerts page. Stay informed through official channels and follow local authority guidelines.";
+    } else if (lowerMessage.includes('safe zone') || lowerMessage.includes('evacuation') || lowerMessage.includes('ආරක්ෂිත කලාප') || lowerMessage.includes('ඉවත් කිරීම')) {
+      return isSinhala ?
+        "ඔබට ඔබගේ ප්‍රදේශයේ ඇති ආරක්ෂිත කලාප සහ ඉවත් කිරීමේ ස්ථාන සොයා ගැනීමට මට උදව් කළ හැකිය. කරුණාකර ඔබගේ ස්ථානය සඳහන් කරන්න." :
+        "I can help you find safe zones and evacuation points in your area. Please specify your location or check our map for the nearest safe zones.";
+    } else if (lowerMessage.includes('stock') || lowerMessage.includes('inventory') || lowerMessage.includes('තොග') || lowerMessage.includes('සම්පත්')) {
+      return isSinhala ?
+        "දැනට පවතින තොග මට්ටම් සහ සැපයුම් තත්ත්වය පරීක්ෂා කිරීමට මට උදව් කළ හැකිය. කරුණාකර ඔබට අවශ්‍ය ද්‍රව්‍ය සඳහන් කරන්න." :
+        "I can help you check current inventory levels and supply status. Please specify what items you're looking for or ask about low stock alerts.";
     } else {
-      return "I'm here to help with weather information and disaster management guidance for Sri Lanka. How can I assist you today?";
+      return isSinhala ?
+        "මම ශ්‍රී ලංකාවේ කාලගුණ තොරතුරු සහ ආපදා කළමනාකරණ මගපෙන්වීම් සඳහා උදව් කිරීමට මෙහි සිටිමි. අද මට ඔබට උදව් කළ හැක්කේ කෙසේද?" :
+        "I'm here to help with weather information and disaster management guidance for Sri Lanka. How can I assist you today?";
     }
   }
 

@@ -9,8 +9,8 @@ const containerStyle = {
 };
 
 const dangerIcons = {
-  Floods: { url: "/flood.png", w: 40, h: 40 },
-  Landslides: { url: "/landslide.png", w: 40, h: 40 },
+  Floods: { url: "/floodNew.png", w: 40, h: 40 },
+  Landslides: { url: "/landslideNew.png", w: 40, h: 40 },
   "High Wind": { url: "/highwind.png", w: 40, h: 40 },
   "Power Cuts": { url: "/nopower.png", w: 40, h: 40 },
   "Water Cuts": { url: "/nowater.png", w: 40, h: 40 },

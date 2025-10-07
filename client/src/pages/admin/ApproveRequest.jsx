@@ -4,9 +4,9 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Check, FileText } from "lucide-react";
 import { useInventory } from "../../context/InventoryContext";
 import { useEmergency } from "../../context/EmergencyContext";
+import { sendSms } from "../../services/smsService";
 
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+
 
 const ApproveRequest = () => {
   const location = useLocation();
@@ -56,6 +56,12 @@ const ApproveRequest = () => {
       setLoading(true);
       await handleUpdateRequest(request.id, { status: "Complete" });
       setRequest((prev) => ({ ...prev, status: "Complete" }));
+      // Send SMS to requester
+      const phone = request.phone || request.user?.phone;
+      if (phone) {
+        const message = `Lanka Alert: Your emergency request (${request.emergencyType || "General"}) has been approved. Our team is processing assistance. Stay safe.`;
+        try { await sendSms(phone, message); } catch (e) { console.error("SMS send failed", e); }
+      }
       alert("Request approved and marked as Complete.");
       navigate("/admin/emergency");
     } catch (err) {
@@ -104,6 +110,12 @@ const ApproveRequest = () => {
       if (allApproved) {
         await handleUpdateRequest(request.id, { status: "Complete" });
         setRequest((prev) => ({ ...prev, status: "Complete" }));
+        // Send SMS to requester
+        const phone = request.phone || request.user?.phone;
+        if (phone) {
+          const message = `Lanka Alert: Your emergency request (${request.emergencyType || "General"}) has been approved. Supplies are being arranged. Stay safe.`;
+          try { await sendSms(phone, message); } catch (e) { console.error("SMS send failed", e); }
+        }
         alert("All items approved — request marked as Complete.");
       } else {
         alert(`${itemName} approved. Remaining stock updated.`);
@@ -118,124 +130,14 @@ const ApproveRequest = () => {
 
   const foodItems = normalizedFoodItems(request);
 
-  // ---------------- PDF Generation (Compact Table Format) ----------------
-const generatePDF = () => {
-  const doc = new jsPDF();
-  
-  // Set document properties
-  doc.setProperties({
-    title: "LankaAlert - Emergency Request Details",
-    subject: "Emergency Request Approval Details",
-    author: "LankaAlert System",
-  });
 
-  // Add header section
-  doc.setFontSize(20);
-  doc.setTextColor(40, 40, 40);
-  doc.text("Lanka Alert", 105, 20, { align: "center" });
-  
-  doc.setFontSize(14);
-  doc.setTextColor(100, 100, 100);
-  doc.text("Emergency Request Details", 105, 30, { align: "center" });
-  
-  // Add report generation info
-  doc.setFontSize(10);
-  doc.setTextColor(120, 120, 120);
-  doc.text(`Report Generated: ${new Date().toLocaleString()}`, 105, 40, { align: "center" });
-  
-  // Add system admin info
-  doc.text("System Admin: Vihanga Edirisinghe", 105, 47, { align: "center" });
 
-  // Try to add logo
-  try {
-    const logoUrl = `${window.location.origin}/logo.png`;
-    doc.addImage(logoUrl, 'PNG', 20, 10, 15, 15);
-  } catch (error) {
-    console.log('Could not load logo, continuing without it');
-  }
-
-  // Create a comprehensive table similar to the sample format
-  const columns = [
-    { header: "Field", dataKey: "field" },
-    { header: "Details", dataKey: "details" },
-  ];
-
-  const baseRows = [
-    { field: "Request ID", details: request.id || "N/A" },
-    { field: "Name", details: request.user?.name || request.name || "N/A" },
-    { field: "Phone", details: request.user?.phone || request.phone || "N/A" },
-    { field: "Location", details: request.user?.location || request.location || "N/A" },
-    { field: "Emergency Type", details: request.emergencyType || "N/A" },
-    { field: "Urgency", details: request.urgency ? request.urgency.charAt(0).toUpperCase() + request.urgency.slice(1) : "N/A" },
-    { field: "Status", details: request.status || "Pending" },
-    { field: "Description", details: request.description || "N/A" },
-    { field: "Requested At", details: request.createdAt?.toDate ? request.createdAt.toDate().toLocaleString() : "Unknown" },
-  ];
-
-  // Add food items if available
-  if (foodItems.length > 0) {
-    const foodDetails = foodItems.map(item => 
-      `${item.name} (Qty: ${item.quantity}) - ${approvedItems.includes(item.name.toLowerCase()) || request.status === "Complete" ? "Approved" : "Pending"}`
-    ).join("; ");
-    baseRows.push({ field: "Food Items", details: foodDetails });
-  }
-
-  // Add help needed if available
-  if (request.needsHelp && request.needsHelp.length > 0) {
-    baseRows.push({ field: "Help Needed", details: request.needsHelp.join(", ") });
-  }
-
-  autoTable(doc, {
-    startY: 55,
-    head: [columns.map((col) => col.header)],
-    body: baseRows.map((row) => columns.map((col) => row[col.dataKey])),
-    styles: { 
-      fontSize: 9, 
-      cellPadding: 3, 
-      lineWidth: 0.1,
-      lineColor: [200, 200, 200]
-    },
-    headStyles: { 
-      fillColor: [54, 162, 235], 
-      textColor: 255, 
-      lineWidth: 0.1,
-      fontStyle: 'bold'
-    },
-    alternateRowStyles: {
-      fillColor: [245, 245, 245]
-    },
-    theme: "grid",
-    margin: { top: 55 },
-  });
-
-  // Add footer with signature line
-  const finalY = doc.lastAutoTable.finalY + 10;
-  
-  doc.setFontSize(10);
-  doc.setTextColor(100, 100, 100);
-  doc.text("Verified by: ______", 20, finalY + 10);
-  doc.text("Vihanga Edirisinghe", 20, finalY + 20);
-  
-  doc.text(`Page 1 of 1`, 195, finalY + 20, { align: "right" });
-
-  // Save the PDF
-  doc.save(`LankaAlert_Request_${request.id}_${new Date().toISOString().split('T')[0]}.pdf`);
-};
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen font-[Inter]">
       <h1 className="text-2xl font-bold mb-4">Approve Emergency Request</h1>
 
-      {/* PDF Button */}
-      <div className="flex justify-end mb-4">
-        <button
-          onClick={generatePDF}
-          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors"
-        >
-          <FileText className="h-4 w-4 mr-2" />
-          Generate PDF
-        </button>
-      </div>
+      
 
       {/* Requester Info */}
       <div className="p-6 bg-white shadow rounded mb-6 space-y-2">
