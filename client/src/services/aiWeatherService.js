@@ -31,9 +31,9 @@ class aiWeatherService {
   getSriLankanCities() {
     return {
       // Major cities
-      'colombo': { lat: 6.9271, lng: 79.8612, name: 'Colombo', sinName: 'කොළඹ' },
+      'colombo': { lat: 6.9271, lng: 79.8612, name: 'Colombo', sinName: 'කොළඹ', aliases: ['colombo city', 'kolamba', 'කොළඹ', 'colombo district'] },
       'kandy': { lat: 7.2906, lng: 80.6337, name: 'Kandy', sinName: 'මහනුවර' },
-      'galle': { lat: 6.0535, lng: 80.2210, name: 'Galle', sinName: 'ගාල්ල' },
+      'galle': { lat: 6.0535, lng: 80.2210, name: 'Galle', sinName: 'ගාල්ල', aliases: ['galle city', 'ගාල්ල', 'galle district'] },
       'jaffna': { lat: 9.6615, lng: 80.0255, name: 'Jaffna', sinName: 'යාපනය' },
       'negombo': { lat: 7.2083, lng: 79.8358, name: 'Negombo', sinName: 'මීගමුව' },
       'trincomalee': { lat: 8.5874, lng: 81.2152, name: 'Trincomalee', sinName: 'ත්\u200dරිකුණාමලය' },
@@ -54,7 +54,43 @@ class aiWeatherService {
       'dambulla': { lat: 7.8667, lng: 80.65, name: 'Dambulla', sinName: 'දඹුල්ල' },
       'hambantota': { lat: 6.1264, lng: 81.1219, name: 'Hambantota', sinName: 'හම්බන්තොට' },
       'monaragala': { lat: 6.8833, lng: 81.35, name: 'Monaragala', sinName: 'මොනරාගල' },
-      'kegalle': { lat: 7.2519, lng: 80.3475, name: 'Kegalle', sinName: 'කෑගල්ල' }
+      'kegalle': { lat: 7.2519, lng: 80.3475, name: 'Kegalle', sinName: 'කෑගල්ල' },
+
+      // Colombo District (expanded)
+      'dehiwala-mount lavinia': { lat: 6.8296, lng: 79.8636, name: 'Dehiwala-Mount Lavinia', sinName: 'දෙහිවල-මවුන්ට් ලවිනය', aliases: ['dehiwala', 'mount lavinia', 'දෙහිවල', 'මවුන්ට් ලවිනය'] },
+      'moratuwa': { lat: 6.7740, lng: 79.8829, name: 'Moratuwa', sinName: 'මොරටුව', aliases: ['මොරටුව'] },
+      'sri jayawardenepura kotte': { lat: 6.8941, lng: 79.9025, name: 'Sri Jayawardenepura Kotte', sinName: 'ශ්‍රී ජයවර්ධනපුර කෝට්ටේ', aliases: ['kotte', 'sjp kotte', 'ශ්‍රී ජයවර්ධනපුර', 'කෝට්ටේ'] },
+      'maharagama': { lat: 6.8428, lng: 79.9232, name: 'Maharagama', sinName: 'මහරගම', aliases: ['මහරගම'] },
+      'kaduwela': { lat: 6.9331, lng: 79.9843, name: 'Kaduwela', sinName: 'කඩුවෙල', aliases: ['කඩුවෙල'] },
+      'homagama': { lat: 6.8441, lng: 80.0020, name: 'Homagama', sinName: 'හෝමාගම', aliases: ['හෝමාගම'] },
+      'piliyandala': { lat: 6.8018, lng: 79.9225, name: 'Piliyandala', sinName: 'පිළියන්දල', aliases: ['පිළියන්දල'] },
+      'nugegoda': { lat: 6.8721, lng: 79.8889, name: 'Nugegoda', sinName: 'නුගේගොඩ', aliases: ['නුගේගොඩ'] },
+      'ratmalana': { lat: 6.8193, lng: 79.8836, name: 'Ratmalana', sinName: 'රත්මලාන', aliases: ['රත්මලාන'] },
+      'malabe': { lat: 6.9055, lng: 79.9572, name: 'Malabe', sinName: 'මාලාබේ', aliases: ['මාලාබේ'] },
+      'battaramulla': { lat: 6.8969, lng: 79.9181, name: 'Battaramulla', sinName: 'බත්තරමුල්ල', aliases: ['බත්තරමුල්ල'] },
+      'pannipitiya': { lat: 6.8469, lng: 79.94, name: 'Pannipitiya', sinName: 'පන්නිපිටිය', aliases: ['පන්නිපිටිය'] },
+      'boralesgamuwa': { lat: 6.8167, lng: 79.9, name: 'Boralesgamuwa', sinName: 'බොරලේස්ගමුව', aliases: ['බොරලේස්ගමුව'] },
+      'kesbewa': { lat: 6.801, lng: 79.965, name: 'Kesbewa', sinName: 'කැස්බැව', aliases: ['කැස්බැව'] },
+      'avissawella': { lat: 6.954, lng: 80.204, name: 'Avissawella', sinName: 'අවිස්සාවේල්ල', aliases: ['awissawella', 'අවිස්සාවේල්ල'] },
+      'padukka': { lat: 6.8444, lng: 80.0833, name: 'Padukka', sinName: 'පාදුක්ක', aliases: ['පාදුක්ක'] },
+      'hanwella': { lat: 6.9038, lng: 80.0847, name: 'Hanwella', sinName: 'හංවැල්ල', aliases: ['හංවැල්ල'] },
+      'rajagiriya': { lat: 6.9104, lng: 79.8989, name: 'Rajagiriya', sinName: 'රාජගිරිය', aliases: ['රාජගිරිය'] },
+      'wellampitiya': { lat: 6.9333, lng: 79.9, name: 'Wellampitiya', sinName: 'වැල්ලම්පිටිය', aliases: ['වැල්ලම්පිටිය'] },
+
+      // Galle District (expanded)
+      'hikkaduwa': { lat: 6.139, lng: 80.1006, name: 'Hikkaduwa', sinName: 'හික්කඩුව', aliases: ['හික්කඩුව'] },
+      'ambalangoda': { lat: 6.235, lng: 80.0547, name: 'Ambalangoda', sinName: 'අම්බලංගොඩ', aliases: ['අම්බලංගොඩ'] },
+      'elpitiya': { lat: 6.2989, lng: 80.1853, name: 'Elpitiya', sinName: 'ඇල්පිටිය', aliases: ['ඇල්පිටිය'] },
+      'baddegama': { lat: 6.1711, lng: 80.2178, name: 'Baddegama', sinName: 'බද්දේගම', aliases: ['බද්දේගම'] },
+      'unawatuna': { lat: 6.0109, lng: 80.2493, name: 'Unawatuna', sinName: 'උනාවටුන', aliases: ['උනාවටුන'] },
+      'karapitiya': { lat: 6.0531, lng: 80.2386, name: 'Karapitiya', sinName: 'කරපිටිය', aliases: ['කරපිටිය'] },
+      'ahangama': { lat: 5.9714, lng: 80.3808, name: 'Ahangama', sinName: 'අහංගම', aliases: ['අහංගම'] },
+      'habaraduwa': { lat: 5.99, lng: 80.3167, name: 'Habaraduwa', sinName: 'හබරදූව', aliases: ['හබරදූව'] },
+      'bentota': { lat: 6.421, lng: 80.0049, name: 'Bentota', sinName: 'බෙන්තොට', aliases: ['බෙන්තොට'] },
+      'akmeemana': { lat: 6.0533, lng: 80.3114, name: 'Akmeemana', sinName: 'අක්මීමන', aliases: ['අක්මීමන'] },
+      'yakkalamulla': { lat: 6.0959, lng: 80.3453, name: 'Yakkalamulla', sinName: 'යක්කලමුල්ල', aliases: ['යක්කලමුල්ල'] },
+      'imaduwa': { lat: 6.04, lng: 80.4, name: 'Imaduwa', sinName: 'ඉමදූව', aliases: ['ඉමදූව'] },
+      'ahungalla': { lat: 6.3182, lng: 80.0366, name: 'Ahungalla', sinName: 'අහුංගල්ල', aliases: ['අහුංගල්ල'] }
     };
   }
 
@@ -62,12 +98,13 @@ class aiWeatherService {
   findCityCoordinates(text) {
     const cities = this.getSriLankanCities();
     const lowerText = text.toLowerCase().trim();
+    const normalized = lowerText.replace(/[-,]/g, ' ').replace(/\s+/g, ' ').trim();
     
     // Enhanced keyword matching for better city detection
     const cityKeywords = {
-      'colombo': ['colombo', 'කොළඹ', 'colombo city', 'capital'],
+      'colombo': ['colombo', 'කොළඹ', 'colombo city', 'capital', 'colombo district'],
       'kandy': ['kandy', 'මහනුවර', 'kandy city', 'hill capital'],
-      'galle': ['galle', 'ගාල්ල', 'galle fort', 'southern'],
+      'galle': ['galle', 'ගාල්ල', 'galle fort', 'southern', 'galle district'],
       'jaffna': ['jaffna', 'යාපනය', 'northern', 'jaffna city'],
       'negombo': ['negombo', 'මීගමුව', 'airport city', 'beach'],
       'matara': ['matara', 'මාතර', 'southern province'],
@@ -81,16 +118,20 @@ class aiWeatherService {
     // First try exact keyword matching
     for (const [cityKey, keywords] of Object.entries(cityKeywords)) {
       for (const keyword of keywords) {
-        if (lowerText.includes(keyword.toLowerCase())) {
+        if (normalized.includes(keyword.toLowerCase())) {
           return cities[cityKey] || cities['colombo'];
         }
       }
     }
     
-    // Then try partial matching with city names
+    // Then try alias and partial matching with city names
     for (const [key, value] of Object.entries(cities)) {
-      if (lowerText.includes(key) || 
-          lowerText.includes(value.name.toLowerCase()) || 
+      const aliases = value.aliases || [];
+      const englishName = value.name && typeof value.name === 'string' ? value.name.toLowerCase() : '';
+      if (normalized.includes(key) ||
+          normalized.includes(englishName) ||
+          normalized.includes(key.replace(/-/g, ' ')) ||
+          aliases.some(a => normalized.includes(a.toLowerCase())) ||
           text.includes(value.sinName)) {
         return value;
       }

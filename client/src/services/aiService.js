@@ -83,11 +83,13 @@ class AIService {
       } else if (isWeatherQuery && !weatherContext) {
         // Try to get weather data based on user's location query
         const location = aiWeatherService.findCityCoordinates(userMessage);
+        const userLang = aiWeatherService.detectLanguage(userMessage);
         try {
           const currentWeather = await aiWeatherService.getCurrentWeather(location.lat, location.lng);
-          const formattedWeather = aiWeatherService.formatCurrentWeather(currentWeather);
+          const formattedWeather = aiWeatherService.formatCurrentWeather(currentWeather, userLang);
+          const localizedLocation = userLang === 'si' ? (location.sinName || location.name) : location.name;
           contextualPrompt = this.buildWeatherPrompt(userMessage, {
-            location: location.name,
+            location: localizedLocation,
             current: formattedWeather
           });
         } catch (error) {
