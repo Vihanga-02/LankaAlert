@@ -66,7 +66,28 @@ const EmergencyHelp = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setEmergencyForm(prev => ({ ...prev, [name]: value }));
+    
+    let validatedValue = value;
+    
+    // Phone number validation - only numbers and max 10 digits
+    if (name === 'phone') {
+      // Remove any non-digit characters
+      const digitsOnly = value.replace(/\D/g, '');
+      // Take only first 10 digits
+      validatedValue = digitsOnly.slice(0, 10);
+    }
+    
+    // Name validation - only letters and spaces
+    if (name === 'name') {
+      validatedValue = value.replace(/[^a-zA-Z\s]/g, '');
+    }
+    
+    // Location validation - alphanumeric and common address characters
+    if (name === 'location') {
+      validatedValue = value.replace(/[^a-zA-Z0-9\s,.-]/g, '');
+    }
+    
+    setEmergencyForm(prev => ({ ...prev, [name]: validatedValue }));
   };
 
   const handleNeedToggle = (needId) => {
@@ -87,32 +108,6 @@ const EmergencyHelp = () => {
     }
   };
 
-  // --- Validation Handlers ---
-  const handleNameKeyDown = (e) => {
-    const regex = /^[a-zA-Z\s]$/;
-    if (!regex.test(e.key) && e.key !== "Backspace" && e.key !== "Tab") {
-      e.preventDefault();
-      alert("Name can only contain letters and spaces.");
-    }
-  };
-
-  const handlePhoneKeyDown = (e) => {
-    const regex = /^[0-9+]$/;
-    if (!regex.test(e.key) && e.key !== "Backspace" && e.key !== "Tab") {
-      e.preventDefault();
-      alert("Phone number can only contain digits.");
-    }
-  };
-
-  const handleLocationKeyDown = (e) => {
-    const regex = /^[a-zA-Z0-9\s,.-]$/;
-    if (!regex.test(e.key) && e.key !== "Backspace" && e.key !== "Tab") {
-      e.preventDefault();
-      alert("Location can only contain letters, numbers, spaces, comma, dot or dash.");
-    }
-  };
-  // ---------------------------
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!user) {
@@ -120,7 +115,7 @@ const EmergencyHelp = () => {
       return;
     }
 
-    // --- New Validation ---
+    // Validation checks
     if (!emergencyForm.emergencyType) {
       alert("Please select an Emergency Type before submitting.");
       return;
@@ -135,7 +130,12 @@ const EmergencyHelp = () => {
       alert("Please select at least one type of Help Needed.");
       return;
     }
-    // ----------------------
+
+    // Phone number length validation
+    if (emergencyForm.phone.length !== 10) {
+      alert("Please enter a valid 10-digit phone number.");
+      return;
+    }
 
     try {
       const requestData = {
@@ -215,7 +215,6 @@ const EmergencyHelp = () => {
                       name="name"
                       value={emergencyForm.name}
                       onChange={handleInputChange}
-                      onKeyDown={handleNameKeyDown}
                       required
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Enter your full name"
@@ -228,11 +227,17 @@ const EmergencyHelp = () => {
                       name="phone"
                       value={emergencyForm.phone}
                       onChange={handleInputChange}
-                      onKeyDown={handlePhoneKeyDown}
                       required
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="0123 456 789"
+                      placeholder="0123456789"
+                      maxLength={10}
                     />
+                    <p className="text-xs text-gray-500 mt-1">
+                      {emergencyForm.phone.length}/10 digits
+                      {emergencyForm.phone.length === 10 && (
+                        <span className="text-green-600 ml-2">✓ Valid</span>
+                      )}
+                    </p>
                   </div>
                 </div>
 
@@ -244,7 +249,6 @@ const EmergencyHelp = () => {
                     name="location"
                     value={emergencyForm.location}
                     onChange={handleInputChange}
-                    onKeyDown={handleLocationKeyDown}
                     required
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Enter your current location or address"
@@ -343,7 +347,10 @@ const EmergencyHelp = () => {
                 </div>
 
                 {/* Submit */}
-                <button type="submit" className="w-full bg-red-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-red-700 transition-colors flex items-center justify-center space-x-2">
+                <button 
+                  type="submit" 
+                  className="w-full bg-red-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-red-700 transition-colors flex items-center justify-center space-x-2"
+                >
                   <Send className="h-5 w-5" />
                   <span>Submit Emergency Request</span>
                 </button>
@@ -353,6 +360,16 @@ const EmergencyHelp = () => {
 
           {/* Quick Actions & Info */}
           <div className="space-y-6">
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h3>
+              <div className="space-y-3">
+                <button className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2">
+                  <MessageSquare className="h-5 w-5" />
+                  <span>Chat with Support</span>
+                </button>
+              </div>
+            </div>
+
             <div className="bg-blue-50 rounded-lg p-6">
               <h3 className="text-lg font-bold text-blue-900 mb-4 flex items-center">
                 <Clock className="h-5 w-5 mr-2" />
@@ -388,18 +405,17 @@ const EmergencyHelp = () => {
                 <li>• Follow official evacuation orders</li>
               </ul>
             </div>
+
+            {/* Show Previous Requests Button */}
+            <button
+              type="button"
+              onClick={() => navigate("/previous-requests")}
+              className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2 shadow-md hover:shadow-lg"
+            >
+              <Check className="h-5 w-5" />
+              <span>Show Previous Requests</span>
+            </button>
           </div>
-
-                    {/* Show Previous Requests Button */}
-          <button
-            type="button"
-            onClick={() => navigate("/previous-requests")}
-            className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2 shadow-md hover:shadow-lg"
-          >
-            <Check className="h-5 w-5" />
-            <span>Show Previous Requests</span>
-          </button>
-
         </div> {/* End of grid */}
       </div> {/* End of max-w container */}
     </div> 
@@ -407,4 +423,3 @@ const EmergencyHelp = () => {
 };
 
 export default EmergencyHelp;
-
