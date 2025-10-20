@@ -8,7 +8,20 @@ import {
   deleteDoc,
   doc,
 } from "firebase/firestore";
-import { Bell, Pencil, Trash2, CheckCircle, XCircle } from "lucide-react";
+import { 
+  Bell, 
+  Pencil, 
+  Trash2, 
+  CheckCircle, 
+  XCircle, 
+  Plus, 
+  Search, 
+  Filter,
+  FileText,
+  MapPin,
+  Clock,
+  AlertTriangle
+} from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -20,6 +33,8 @@ export default function NotificationManager() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   // ───────────── Fetch Zones & Notifications ─────────────
   useEffect(() => {
@@ -113,6 +128,22 @@ export default function NotificationManager() {
     setMessage("");
     setSelectedZone("");
   };
+
+  // ───────────── Filtering ─────────────
+  const filteredNotifications = notifications.filter((notif) => {
+    const matchesSearch = 
+      notif.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      notif.message?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesStatus = statusFilter === "all" || notif.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
+
+  // Calculate stats
+  const totalNotifications = notifications.length;
+  const activeNotifications = notifications.filter(n => n.status === "active").length;
+  const inactiveNotifications = notifications.filter(n => n.status === "inactive").length;
 
   // ───────────── Export PDF ─────────────
 const exportPDF = () => {
@@ -241,132 +272,278 @@ const exportPDF = () => {
 };
   // ───────────── UI ─────────────
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-3">
-          <Bell className="h-7 w-7 text-blue-600" />
-          <h1 className="text-2xl font-bold text-gray-900">Manage Notifications</h1>
+      <div className="mb-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Notification Management</h1>
+            <p className="mt-2 text-gray-600">Create and manage zone-based notifications for emergency alerts</p>
+          </div>
+          <button
+            onClick={exportPDF}
+            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <FileText className="h-5 w-5 mr-2" />
+            Export PDF
+          </button>
         </div>
-        <button
-          onClick={exportPDF}
-          className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
-        >
-          Export PDF
-        </button>
       </div>
 
-      {/* Form */}
-      <div className="bg-white p-6 rounded-xl shadow space-y-4 mb-10">
-        <select
-          value={selectedZone}
-          onChange={(e) => setSelectedZone(e.target.value)}
-          className="border rounded p-2 w-full"
-        >
-          <option value="">Select Zone</option>
-          {zones.map((zone) => (
-            <option key={zone.id} value={zone.id}>
-              {zone.city} - {zone.subCategory}
-            </option>
-          ))}
-        </select>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center">
+            <div className="p-2 rounded-lg bg-blue-500">
+              <Bell className="h-6 w-6 text-white" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Total Notifications</p>
+              <p className="text-2xl font-semibold text-gray-900">{totalNotifications}</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center">
+            <div className="p-2 rounded-lg bg-green-500">
+              <CheckCircle className="h-6 w-6 text-white" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Active</p>
+              <p className="text-2xl font-semibold text-gray-900">{activeNotifications}</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center">
+            <div className="p-2 rounded-lg bg-gray-500">
+              <XCircle className="h-6 w-6 text-white" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Inactive</p>
+              <p className="text-2xl font-semibold text-gray-900">{inactiveNotifications}</p>
+            </div>
+          </div>
+        </div>
+      </div>
 
-        <input
-          type="text"
-          placeholder="Notification Title"
-          className="border rounded p-2 w-full"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-        />
-
-        <textarea
-          placeholder="Notification Message"
-          className="border rounded p-2 w-full"
-          rows={3}
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-        />
-
-        {editingId ? (
-          <div className="flex space-x-3">
-            <button
-              onClick={() => updateNotification(editingId)}
-              className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+      {/* Search and Filter */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search notifications by title or message..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          <div className="flex items-center space-x-2">
+            <Filter className="h-5 w-5 text-gray-400" />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
-              Update
-            </button>
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Create/Edit Form */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-lg font-semibold text-gray-900">
+            {editingId ? "Edit Notification" : "Create New Notification"}
+          </h3>
+          {editingId && (
             <button
               onClick={resetForm}
-              className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+              className="text-gray-500 hover:text-gray-700"
             >
-              Cancel
+              <XCircle className="h-5 w-5" />
             </button>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Select Zone
+            </label>
+            <select
+              value={selectedZone}
+              onChange={(e) => setSelectedZone(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Choose a zone...</option>
+              {zones.map((zone) => (
+                <option key={zone.id} value={zone.id}>
+                  {zone.city} - {zone.subCategory}
+                </option>
+              ))}
+            </select>
           </div>
-        ) : (
-          <button
-            onClick={createNotification}
-            disabled={loading}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
-          >
-            {loading ? "Creating..." : "Create Notification"}
-          </button>
-        )}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Notification Title
+            </label>
+            <input
+              type="text"
+              placeholder="Enter notification title..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="mt-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Notification Message
+          </label>
+          <textarea
+            placeholder="Enter notification message..."
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            rows={4}
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+          />
+        </div>
+
+        <div className="flex justify-end space-x-3 mt-6">
+          {editingId ? (
+            <>
+              <button
+                onClick={resetForm}
+                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => updateNotification(editingId)}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                Update Notification
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={createNotification}
+              disabled={loading}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            >
+              {loading ? "Creating..." : "Create Notification"}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Notifications List */}
-      <div className="bg-white rounded-xl shadow overflow-hidden">
-        <table className="w-full text-left">
-          <thead className="bg-gray-100 border-b">
-            <tr>
-              <th className="p-3">Zone</th>
-              <th className="p-3">Title</th>
-              <th className="p-3">Message</th>
-              <th className="p-3">Status</th>
-              <th className="p-3">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {notifications.map((n) => {
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>
+          <p className="text-sm text-gray-600">
+            Showing {filteredNotifications.length} of {notifications.length} notifications
+          </p>
+        </div>
+
+        {filteredNotifications.length === 0 ? (
+          <div className="text-center py-12">
+            <Bell className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No notifications found</h3>
+            <p className="text-gray-500">
+              {searchQuery ? "Try adjusting your search criteria." : "No notifications have been created yet."}
+            </p>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-200">
+            {filteredNotifications.map((n) => {
               const zone = zones.find(z => z.id === n.zoneId);
               const zoneName = zone ? `${zone.city} - ${zone.subCategory}` : n.zoneId;
               
               return (
-                <tr key={n.id} className="border-b hover:bg-gray-50">
-                  <td className="p-3">{zoneName}</td>
-                  <td className="p-3">{n.title}</td>
-                  <td className="p-3">{n.message}</td>
-                  <td className="p-3">
-                    <span
-                      className={`px-2 py-1 rounded text-sm ${
-                        n.status === "active" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-                      }`}
-                    >
-                      {n.status}
-                    </span>
-                  </td>
-                  <td className="p-3 flex space-x-2">
-                    <button onClick={() => startEdit(n)} className="text-blue-600 hover:text-blue-800">
-                      <Pencil size={18} />
-                    </button>
-                    <button onClick={() => toggleStatus(n.id, n.status)} className="text-green-600 hover:text-green-800">
-                      {n.status === "active" ? <XCircle size={18} /> : <CheckCircle size={18} />}
-                    </button>
-                    <button onClick={() => deleteNotification(n.id)} className="text-red-600 hover:text-red-800">
-                      <Trash2 size={18} />
-                    </button>
-                  </td>
-                </tr>
+                <div key={n.id} className="p-6 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3 mb-2">
+                        <div className="p-2 rounded-lg bg-blue-100">
+                          <Bell className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <div>
+                          <h4 className="text-lg font-semibold text-gray-900">{n.title}</h4>
+                          <div className="flex items-center space-x-4 text-sm text-gray-500">
+                            <div className="flex items-center space-x-1">
+                              <MapPin className="h-4 w-4" />
+                              <span>{zoneName}</span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <Clock className="h-4 w-4" />
+                              <span>{new Date(n.createdAt).toLocaleDateString()}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <p className="text-gray-700 mb-4">{n.message}</p>
+                      
+                      <div className="flex items-center space-x-4">
+                        <span
+                          className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                            n.status === "active" 
+                              ? "bg-green-100 text-green-800" 
+                              : "bg-gray-100 text-gray-800"
+                          }`}
+                        >
+                          {n.status === "active" ? (
+                            <CheckCircle className="h-4 w-4 mr-1" />
+                          ) : (
+                            <XCircle className="h-4 w-4 mr-1" />
+                          )}
+                          {n.status}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2 ml-4">
+                      <button 
+                        onClick={() => startEdit(n)} 
+                        className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+                        title="Edit notification"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button 
+                        onClick={() => toggleStatus(n.id, n.status)} 
+                        className={`p-2 rounded-lg transition-colors ${
+                          n.status === "active" 
+                            ? "text-red-600 hover:bg-red-100" 
+                            : "text-green-600 hover:bg-green-100"
+                        }`}
+                        title={n.status === "active" ? "Deactivate" : "Activate"}
+                      >
+                        {n.status === "active" ? <XCircle className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
+                      </button>
+                      <button 
+                        onClick={() => deleteNotification(n.id)} 
+                        className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
+                        title="Delete notification"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
               );
             })}
-            {notifications.length === 0 && (
-              <tr>
-                <td colSpan={5} className="text-center p-4 text-gray-500">
-                  No notifications yet.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -9,6 +9,10 @@ import {
   AlertTriangle,
   CheckCircle,
   FileText,
+  Package,
+  Activity,
+  TrendingUp,
+  TrendingDown,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useInventory } from "../../context/InventoryContext";
@@ -88,6 +92,13 @@ const InventoryManagement = () => {
       item.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
       item.category?.toLowerCase() === activeTab
   );
+
+  // Calculate stats
+  const totalItems = inventory.length;
+  const foodItems = inventory.filter(item => item.category === "food").length;
+  const medicalItems = inventory.filter(item => item.category === "medical").length;
+  const lowStockItems = inventory.filter(item => item.status === "Low Stock").length;
+  const outOfStockItems = inventory.filter(item => item.status === "Out of Stock").length;
 
 // ---------------- PDF GENERATION ----------------
 const generatePDF = () => {
@@ -220,204 +231,332 @@ const generatePDF = () => {
 
 
   return (
-    <div className="p-6 space-y-6 bg-gradient-to-br from-indigo-50 to-blue-100 min-h-screen">
-      {/* HEADER */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-indigo-900">Inventory Management</h1>
-        <div className="flex space-x-3">
-          <Link
-            to="/admin/inventory/add"
-            className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-700 transition-colors"
-          >
-            <Plus className="h-5 w-5 mr-2" />
-            Add Item
-          </Link>
-
-          {/* PDF Button */}
-          <button
-            onClick={generatePDF}
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition-colors"
-          >
-            <FileText className="h-5 w-5 mr-2" />
-            Generate PDF
-          </button>
+    <div className="p-6 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Inventory Management</h1>
+            <p className="mt-2 text-gray-600">Manage your emergency supplies and inventory items</p>
+          </div>
+          <div className="flex space-x-3">
+            <Link
+              to="/admin/inventory/add"
+              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Plus className="h-5 w-5 mr-2" />
+              Add Item
+            </Link>
+            <button
+              onClick={generatePDF}
+              className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              <FileText className="h-5 w-5 mr-2" />
+              Generate PDF
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* CATEGORY TABS */}
-      <div className="flex space-x-4 border-b pb-2">
-        <button
-          onClick={() => setActiveTab("food")}
-          className={`px-4 py-2 font-medium ${
-            activeTab === "food"
-              ? "border-b-2 border-indigo-600 text-indigo-600"
-              : "text-gray-600"
-          }`}
-        >
-          Food Items
-        </button>
-        <button
-          onClick={() => setActiveTab("medical")}
-          className={`px-4 py-2 font-medium ${
-            activeTab === "medical"
-              ? "border-b-2 border-indigo-600 text-indigo-600"
-              : "text-gray-600"
-          }`}
-        >
-          Medical Items
-        </button>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center">
+            <div className="p-2 rounded-lg bg-blue-500">
+              <Package className="h-6 w-6 text-white" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Total Items</p>
+              <p className="text-2xl font-semibold text-gray-900">{totalItems}</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center">
+            <div className="p-2 rounded-lg bg-green-500">
+              <Activity className="h-6 w-6 text-white" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Food Items</p>
+              <p className="text-2xl font-semibold text-gray-900">{foodItems}</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center">
+            <div className="p-2 rounded-lg bg-red-500">
+              <AlertTriangle className="h-6 w-6 text-white" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Medical Items</p>
+              <p className="text-2xl font-semibold text-gray-900">{medicalItems}</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center">
+            <div className="p-2 rounded-lg bg-yellow-500">
+              <TrendingDown className="h-6 w-6 text-white" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Low Stock</p>
+              <p className="text-2xl font-semibold text-gray-900">{lowStockItems}</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center">
+            <div className="p-2 rounded-lg bg-red-500">
+              <AlertTriangle className="h-6 w-6 text-white" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Out of Stock</p>
+              <p className="text-2xl font-semibold text-gray-900">{outOfStockItems}</p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* SEARCH BAR */}
-      <div className="relative">
-        <input
-          type="text"
-          placeholder={`Search ${activeTab} inventory...`}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 border border-indigo-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-        />
-        <Search className="h-5 w-5 text-indigo-400 absolute left-3 top-2.5" />
+      {/* Category Tabs and Search */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          {/* Category Tabs */}
+          <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
+            <button
+              onClick={() => setActiveTab("food")}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                activeTab === "food"
+                  ? "bg-white text-blue-600 shadow-sm"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              Food Items ({foodItems})
+            </button>
+            <button
+              onClick={() => setActiveTab("medical")}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                activeTab === "medical"
+                  ? "bg-white text-blue-600 shadow-sm"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              Medical Items ({medicalItems})
+            </button>
+          </div>
+
+          {/* Search Bar */}
+          <div className="relative lg:w-96">
+            <Search className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder={`Search ${activeTab} inventory...`}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+        </div>
       </div>
 
-      {/* INVENTORY TABLE */}
-      <div className="bg-white shadow-xl rounded-lg overflow-hidden border border-indigo-200">
-        <table className="w-full text-sm text-left">
-          <thead className="bg-indigo-600 text-white">
-            <tr>
-              <th className="px-6 py-3 uppercase font-medium">Item</th>
-              <th className="px-6 py-3 uppercase font-medium">Stock</th>
-              <th className="px-6 py-3 uppercase font-medium">Status</th>
-              <th className="px-6 py-3 uppercase font-medium">Min Stock</th>
-              <th className="px-6 py-3 text-right uppercase font-medium">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-indigo-100 bg-indigo-50">
-            {filteredInventory.map((item, idx) => (
-              <tr
-                key={item.id}
-                className={`hover:bg-indigo-100 ${
-                  idx % 2 === 0 ? "bg-indigo-50" : "bg-indigo-100"
-                }`}
-              >
-                <td className="px-6 py-4 font-medium text-indigo-900">{item.name}</td>
-                <td className="px-6 py-4 text-gray-800">{item.currentStock}</td>
-                <td className="px-6 py-4">{getStatusBadge(item.status)}</td>
-                <td className="px-6 py-4 text-gray-800">{item.minThreshold}</td>
-                <td className="px-6 py-4 text-right space-x-2">
-                  <button
-                    onClick={() => handleEdit(item)}
-                    className="inline-flex items-center px-3 py-1 bg-green-200 text-green-800 rounded-lg hover:bg-green-300 text-sm"
-                  >
-                    <Pencil className="h-4 w-4 mr-1" />
-                    Update
-                  </button>
-                  <button
-                    onClick={() => handleDelete(item.id, item.name)}
-                    className="inline-flex items-center px-3 py-1 bg-red-200 text-red-800 rounded-lg hover:bg-red-300 text-sm"
-                  >
-                    <Trash2 className="h-4 w-4 mr-1" />
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* Inventory Table */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900">
+            {activeTab === "food" ? "Food Items" : "Medical Items"} Inventory
+          </h3>
+          <p className="text-sm text-gray-600">
+            Showing {filteredInventory.length} of {inventory.filter(item => item.category === activeTab).length} items
+          </p>
+        </div>
+        
+        {filteredInventory.length === 0 ? (
+          <div className="text-center py-12">
+            <Package className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No items found</h3>
+            <p className="text-gray-500">
+              {searchQuery ? "Try adjusting your search criteria." : `No ${activeTab} items in inventory.`}
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 font-medium text-gray-900">Item Name</th>
+                  <th className="px-6 py-3 font-medium text-gray-900">Current Stock</th>
+                  <th className="px-6 py-3 font-medium text-gray-900">Min Threshold</th>
+                  <th className="px-6 py-3 font-medium text-gray-900">Status</th>
+                  <th className="px-6 py-3 font-medium text-gray-900 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {filteredInventory.map((item, idx) => (
+                  <tr key={item.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center">
+                        <div className={`p-2 rounded-lg mr-3 ${
+                          item.category === "food" ? "bg-green-100" : "bg-red-100"
+                        }`}>
+                          <Package className={`h-5 w-5 ${
+                            item.category === "food" ? "text-green-600" : "text-red-600"
+                          }`} />
+                        </div>
+                        <div>
+                          <div className="font-medium text-gray-900">{item.name}</div>
+                          <div className="text-sm text-gray-500 capitalize">{item.category}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-lg font-semibold text-gray-900">{item.currentStock}</div>
+                    </td>
+                    <td className="px-6 py-4 text-gray-600">{item.minThreshold}</td>
+                    <td className="px-6 py-4">{getStatusBadge(item.status)}</td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex justify-end space-x-2">
+                        <button
+                          onClick={() => handleEdit(item)}
+                          className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 text-sm transition-colors"
+                        >
+                          <Pencil className="h-4 w-4 mr-1" />
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(item.id, item.name)}
+                          className="inline-flex items-center px-3 py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 text-sm transition-colors"
+                        >
+                          <Trash2 className="h-4 w-4 mr-1" />
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
-      {/* INLINE UPDATE FORM */}
+      {/* Update Form Modal */}
       {editingItem && (
-        <div className="bg-white shadow-lg rounded-lg p-6 mt-6">
-          <h2 className="text-lg font-semibold mb-4">Update Item</h2>
-          <form onSubmit={handleUpdateSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium">Name</label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded-lg"
-              />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900">Update Item</h2>
+              <p className="text-sm text-gray-600">Modify the inventory item details</p>
             </div>
-            <div>
-              <label className="block text-sm font-medium">Current Stock</label>
-              <input
-                type="number"
-                name="currentStock"
-                value={formData.currentStock}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded-lg"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium">Min Stock</label>
-              <input
-                type="number"
-                name="minThreshold"
-                value={formData.minThreshold}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded-lg"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium">Status</label>
-              <select
-                name="status"
-                value={formData.status}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded-lg"
-              >
-                <option>In Stock</option>
-                <option>Low Stock</option>
-                <option>Out of Stock</option>
-              </select>
-            </div>
-            <div className="flex space-x-3">
-              <button
-                type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                Save Changes
-              </button>
-              <button
-                type="button"
-                onClick={() => setEditingItem(null)}
-                className="px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
+            <form onSubmit={handleUpdateSubmit} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Item Name</label>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Current Stock</label>
+                <input
+                  type="number"
+                  name="currentStock"
+                  value={formData.currentStock}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Min Threshold</label>
+                <input
+                  type="number"
+                  name="minThreshold"
+                  value={formData.minThreshold}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                <select
+                  name="status"
+                  value={formData.status}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option>In Stock</option>
+                  <option>Low Stock</option>
+                  <option>Out of Stock</option>
+                </select>
+              </div>
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setEditingItem(null)}
+                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
-      {/* RECENT MOVEMENTS */}
-      <div>
-        <h2 className="text-xl font-semibold text-indigo-900 mb-3">Recent Movements</h2>
-        <div className="bg-white shadow-lg rounded-lg divide-y divide-indigo-100 border border-indigo-200">
-          {recentMovements.slice(-10).map((move) => (
-            <div
-              key={move.id}
-              className="px-6 py-4 flex items-center justify-between hover:bg-indigo-50"
-            >
-              <div className="flex items-center space-x-3">
-                {move.type === "added" ? (
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                ) : (
-                  <AlertTriangle className="h-5 w-5 text-red-500" />
-                )}
-                <div>
-                  <p className="text-sm font-medium text-indigo-900">
-                    {move.type === "added" ? "Added" : "Removed"} {move.quantity}{" "}
-                    {move.item}
-                  </p>
-                  <p className="text-xs text-gray-500">{move.date}</p>
-                </div>
-              </div>
+      {/* Recent Movements */}
+      <div className="mt-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-gray-900">Recent Movements</h2>
+          <span className="text-sm text-gray-500">Last 10 activities</span>
+        </div>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+          {recentMovements.length === 0 ? (
+            <div className="text-center py-8">
+              <Activity className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500">No recent movements</p>
             </div>
-          ))}
+          ) : (
+            <div className="divide-y divide-gray-200">
+              {recentMovements.slice(-10).map((move) => (
+                <div
+                  key={move.id}
+                  className="px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className={`p-2 rounded-lg ${
+                      move.type === "added" ? "bg-green-100" : "bg-red-100"
+                    }`}>
+                      {move.type === "added" ? (
+                        <CheckCircle className="h-5 w-5 text-green-600" />
+                      ) : (
+                        <AlertTriangle className="h-5 w-5 text-red-600" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
+                        {move.type === "added" ? "Added" : "Removed"} {move.quantity} {move.item}
+                      </p>
+                      <p className="text-xs text-gray-500">{move.date}</p>
+                    </div>
+                  </div>
+                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                    move.type === "added" 
+                      ? "bg-green-100 text-green-800" 
+                      : "bg-red-100 text-red-800"
+                  }`}>
+                    {move.type === "added" ? "Addition" : "Removal"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
